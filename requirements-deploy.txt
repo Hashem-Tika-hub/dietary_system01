@@ -1,0 +1,28 @@
+# ============================================================
+#  requirements-deploy.txt — كل ما يحتاجه السيرفر فعليًا بالنشر
+#  (يجمع requirements.txt + api/requirements_api.txt، فالأول وحده
+#   ينقصه FastAPI/uvicorn، والثاني وحده ينقصه pandas/scikit-learn
+#   اللازمة لتحميل نماذج CBF/CF/KMeans وقت التشغيل)
+#
+#  للتطوير المحلي: requirements.txt + api/requirements_api.txt كافيان
+#  للنشر الفعلي: استخدم هذا الملف وحده
+# ============================================================
+
+# --- طبقة الـ API ---
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-jose[cryptography]
+bcrypt
+passlib
+python-multipart
+pydantic[email]
+
+# --- طبقة تعلّم الآلة (لتحميل النماذج المُدرَّبة وقت التشغيل) ---
+pandas
+numpy
+scikit-learn
+
+# --- PostgreSQL (مطلوب فقط لو بدّلت DATABASE_URL من SQLite إلى Postgres
+#     — موصى به للنشر الفعلي، راجع DEPLOY.md قسم "قاعدة البيانات") ---
+psycopg2-binary

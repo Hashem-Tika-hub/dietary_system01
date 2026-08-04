@@ -1,0 +1,57 @@
+﻿Day,Meal,Food,Portion (g),Calories,Protein,Carbs,Fat,Hybrid Score
+الأحد,فطور,"Yogurt, Greek, strawberry, DANNON OIKOS",371.0,393.0,8.25,11.7,2.92,0.72
+الأحد,فطور,مسخن دجاج,151.0,393.0,18.0,24.0,10.5,0.684
+الأحد,غداء,chicken soup,316.0,550.0,12.4,16.9,6.5,0.72
+الأحد,غداء,taco with chicken cheese lettuce,297.0,549.0,13.0,19.3,6.2,0.561
+الأحد,عشاء,chicken and rice casserole homade,500.0,135.0,2.0,2.4,1.0,0.72
+الأحد,عشاء,vanilla soymilk light,500.0,415.0,6.4,9.4,2.1,0.646
+الأحد,وجبة خفيفة,caesar salad mcdonalds,167.0,157.0,6.8,9.1,4.4,0.72
+الأحد,وجبة خفيفة,wheat germ toasted,137.0,158.0,8.7,14.9,3.2,0.562
+الاثنين,فطور,hot sour soup,432.0,393.0,6.0,10.1,2.8,0.72
+الاثنين,فطور,pasta marinara and ground beef sauce,500.0,205.0,2.5,4.1,1.6,0.672
+الاثنين,غداء,beef gravy,447.0,550.0,8.7,11.2,5.5,0.72
+الاثنين,غداء,beef mushroom soup,296.0,551.0,14.0,15.9,7.3,0.375
+الاثنين,عشاء,turkey soup,349.0,471.0,10.2,14.1,4.4,0.72
+الاثنين,عشاء,"TACO BELL, Soft Taco with chicken, cheese and lettuce",249.0,471.0,13.3,19.7,6.35,0.602
+الاثنين,وجبة خفيفة,"Babyfood, carrots and beef, strained",266.0,157.0,3.4,5.7,2.5,0.72
+الاثنين,وجبة خفيفة,"Chili with beans, canned",152.0,157.0,6.12,13.2,3.76,0.479
+الثلاثاء,فطور,"Yogurt, Greek, 2% fat,mixed berry blend, CHOBANI",423.0,393.0,8.26,10.9,1.83,0.72
+الثلاثاء,فطور,"Yogurt, Greek, 2% fat, strawberry banana, CHOBANI",447.0,393.0,8.0,10.2,1.71,0.712
+الثلاثاء,غداء,chicken stock,500.0,430.0,6.0,8.5,2.9,0.72
+الثلاثاء,غداء,winged beans cooked,217.0,549.0,18.3,25.7,10.0,0.614
+الثلاثاء,عشاء,pepperpot soup,471.0,471.0,6.2,9.1,4.5,0.72
+الثلاثاء,عشاء,"Yogurt, Greek, 2%fat, coconut blend, CHOBANI",500.0,460.0,8.11,11.0,1.71,0.639
+الثلاثاء,وجبة خفيفة,green soybean cooked,124.0,157.0,11.1,9.9,5.8,0.72
+الثلاثاء,وجبة خفيفة,veggie burger,127.0,157.0,11.0,10.0,4.4,0.639
+الأربعاء,فطور,"Yogurt, Greek, strawberry, DANNON OIKOS",371.0,393.0,8.25,11.7,2.92,0.72
+الأربعاء,فطور,مسخن دجاج,151.0,393.0,18.0,24.0,10.5,0.711
+الأربعاء,غداء,chicken soup,316.0,550.0,12.4,16.9,6.5,0.72
+الأربعاء,غداء,taco with chicken cheese lettuce,297.0,549.0,13.0,19.3,6.2,0.626
+الأربعاء,عشاء,chicken and rice casserole homade,500.0,135.0,2.0,2.4,1.0,0.72
+الأربعاء,عشاء,vanilla soymilk light,500.0,415.0,6.4,9.4,2.1,0.687
+الأربعاء,وجبة خفيفة,caesar salad mcdonalds,167.0,157.0,6.8,9.1,4.4,0.72
+الأربعاء,وجبة خفيفة,wheat germ toasted,137.0,158.0,8.7,14.9,3.2,0.598
+الخميس,فطور,hot sour soup,432.0,393.0,6.0,10.1,2.8,0.72
+الخميس,فطور,pasta marinara and ground beef sauce,500.0,205.0,2.5,4.1,1.6,0.689
+الخميس,غداء,beef gravy,447.0,550.0,8.7,11.2,5.5,0.72
+الخميس,غداء,beef mushroom soup,296.0,551.0,14.0,15.9,7.3,0.453
+الخميس,عشاء,turkey soup,349.0,471.0,10.2,14.1,4.4,0.72
+الخميس,عشاء,"TACO BELL, Soft Taco with chicken, cheese and lettuce",249.0,471.0,13.3,19.7,6.35,0.699
+الخميس,وجبة خفيفة,"Babyfood, carrots and beef, strained",266.0,157.0,3.4,5.7,2.5,0.72
+الخميس,وجبة خفيفة,"Chili with beans, canned",152.0,157.0,6.12,13.2,3.76,0.516
+الجمعة,فطور,"Yogurt, Greek, 2% fat,mixed berry blend, CHOBANI",423.0,393.0,8.26,10.9,1.83,0.72
+الجمعة,فطور,"Yogurt, Greek, 2% fat, strawberry banana, CHOBANI",447.0,393.0,8.0,10.2,1.71,0.714
+الجمعة,غداء,chicken stock,500.0,430.0,6.0,8.5,2.9,0.72
+الجمعة,غداء,winged beans cooked,217.0,549.0,18.3,25.7,10.0,0.614
+الجمعة,عشاء,pepperpot soup,471.0,471.0,6.2,9.1,4.5,0.72
+الجمعة,عشاء,"Yogurt, Greek, 2%fat, coconut blend, CHOBANI",500.0,460.0,8.11,11.0,1.71,0.639
+الجمعة,وجبة خفيفة,green soybean cooked,124.0,157.0,11.1,9.9,5.8,0.72
+الجمعة,وجبة خفيفة,veggie burger,127.0,157.0,11.0,10.0,4.4,0.639
+السبت,فطور,"Yogurt, Greek, strawberry, DANNON OIKOS",371.0,393.0,8.25,11.7,2.92,0.72
+السبت,فطور,مسخن دجاج,151.0,393.0,18.0,24.0,10.5,0.711
+السبت,غداء,chicken soup,316.0,550.0,12.4,16.9,6.5,0.72
+السبت,غداء,taco with chicken cheese lettuce,297.0,549.0,13.0,19.3,6.2,0.626
+السبت,عشاء,chicken and rice casserole homade,500.0,135.0,2.0,2.4,1.0,0.72
+السبت,عشاء,vanilla soymilk light,500.0,415.0,6.4,9.4,2.1,0.687
+السبت,وجبة خفيفة,caesar salad mcdonalds,167.0,157.0,6.8,9.1,4.4,0.72
+السبت,وجبة خفيفة,wheat germ toasted,137.0,158.0,8.7,14.9,3.2,0.598

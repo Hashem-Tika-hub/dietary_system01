@@ -1,0 +1,57 @@
+﻿Day,Meal,Food,Portion (g),Calories,Protein,Carbs,Fat,Hybrid Score
+الأحد,فطور,premium grilled chicken classic sandwich mcdonalds,244.0,893.0,28.3,44.6,8.6,0.72
+الأحد,فطور,vegetable chicken soup,500.0,830.0,12.3,21.1,4.8,0.674
+الأحد,غداء,"Yogurt, Greek, 2% fat, key lime blend, CHOBANI",500.0,460.0,7.75,11.9,1.47,0.72
+الأحد,غداء,pulled pork in barbecue sauce,299.0,1250.0,32.8,46.7,11.0,0.64
+الأحد,عشاء,"Yogurt, Greek, strawberry, DANNON OIKOS",500.0,530.0,8.25,11.7,2.92,0.72
+الأحد,عشاء,soy chips,500.0,545.0,7.5,15.0,2.1,0.494
+الأحد,وجبة خفيفة,vanilla soymilk light,430.0,357.0,6.4,9.4,2.1,0.72
+الأحد,وجبة خفيفة,hot sour soup,392.0,357.0,6.0,10.1,2.8,0.612
+الاثنين,فطور,taco with chicken cheese lettuce,483.0,894.0,13.0,19.3,6.2,0.72
+الاثنين,فطور,steak sandwich,195.0,895.0,30.3,52.0,14.1,0.534
+الاثنين,غداء,sandwich with roast beef,305.0,1250.0,28.6,44.3,13.0,0.72
+الاثنين,غداء,"Milk, lowfat, fluid, 1% milkfat, with added nonfat milk solids, vitamin A and vitamin D",500.0,215.0,3.48,4.97,0.97,0.278
+الاثنين,عشاء,premium grilled chicken ranch blt sandwich mcdonalds,260.0,1071.0,33.7,44.3,10.9,0.72
+الاثنين,عشاء,"Yogurt, Greek, 2%fat, coconut blend, CHOBANI",500.0,460.0,8.11,11.0,1.71,0.633
+الاثنين,وجبة خفيفة,beef vegetable soup,298.0,358.0,8.0,15.4,2.9,0.72
+الاثنين,وجبة خفيفة,scotch broth,181.0,357.0,12.1,23.0,6.4,0.643
+الثلاثاء,فطور,"Yogurt, Greek, 2% fat,mixed berry blend, CHOBANI",500.0,465.0,8.26,10.9,1.83,0.72
+الثلاثاء,فطور,turkey soup,500.0,675.0,10.2,14.1,4.4,0.574
+الثلاثاء,غداء,yogurt low fat,500.0,770.0,12.9,17.2,3.8,0.72
+الثلاثاء,غداء,chicken stock,500.0,430.0,6.0,8.5,2.9,0.588
+الثلاثاء,عشاء,"Yogurt, plain, low fat",500.0,315.0,5.25,7.04,1.55,0.72
+الثلاثاء,عشاء,"Babyfood, cereal, high protein, with apple and orange, prepared with whole milk",500.0,560.0,6.9,13.4,3.9,0.689
+الثلاثاء,وجبة خفيفة,premium grilled chicken classic sandwich mcdonalds,98.0,359.0,28.3,44.6,8.6,0.72
+الثلاثاء,وجبة خفيفة,vegetable chicken soup,215.0,357.0,12.3,21.1,4.8,0.559
+الأربعاء,فطور,"Yogurt, Greek, 2% fat, key lime blend, CHOBANI",500.0,460.0,7.75,11.9,1.47,0.72
+الأربعاء,فطور,pulled pork in barbecue sauce,214.0,895.0,32.8,46.7,11.0,0.701
+الأربعاء,غداء,"Yogurt, Greek, strawberry, DANNON OIKOS",500.0,530.0,8.25,11.7,2.92,0.72
+الأربعاء,غداء,soy chips,500.0,545.0,7.5,15.0,2.1,0.641
+الأربعاء,عشاء,hot sour soup,500.0,455.0,6.0,10.1,2.8,0.72
+الأربعاء,عشاء,vanilla soymilk,500.0,655.0,7.9,15.3,4.3,0.272
+الأربعاء,وجبة خفيفة,vanilla soymilk light,430.0,357.0,6.4,9.4,2.1,0.72
+الأربعاء,وجبة خفيفة,pasta marinara and ground beef sauce,500.0,205.0,2.5,4.1,1.6,0.255
+الخميس,فطور,taco with chicken cheese lettuce,483.0,894.0,13.0,19.3,6.2,0.72
+الخميس,فطور,steak sandwich,195.0,895.0,30.3,52.0,14.1,0.661
+الخميس,غداء,sandwich with roast beef,305.0,1250.0,28.6,44.3,13.0,0.72
+الخميس,غداء,"Milk, lowfat, fluid, 1% milkfat, with added nonfat milk solids, vitamin A and vitamin D",500.0,215.0,3.48,4.97,0.97,0.532
+الخميس,عشاء,premium grilled chicken ranch blt sandwich mcdonalds,260.0,1071.0,33.7,44.3,10.9,0.72
+الخميس,عشاء,"Yogurt, Greek, 2%fat, coconut blend, CHOBANI",500.0,460.0,8.11,11.0,1.71,0.685
+الخميس,وجبة خفيفة,beef vegetable soup,298.0,358.0,8.0,15.4,2.9,0.72
+الخميس,وجبة خفيفة,scotch broth,181.0,357.0,12.1,23.0,6.4,0.651
+الجمعة,فطور,"Yogurt, Greek, 2% fat,mixed berry blend, CHOBANI",500.0,465.0,8.26,10.9,1.83,0.72
+الجمعة,فطور,turkey soup,500.0,675.0,10.2,14.1,4.4,0.649
+الجمعة,غداء,yogurt low fat,500.0,770.0,12.9,17.2,3.8,0.72
+الجمعة,غداء,chicken stock,500.0,430.0,6.0,8.5,2.9,0.595
+الجمعة,عشاء,premium grilled chicken classic sandwich mcdonalds,293.0,1072.0,28.3,44.6,8.6,0.72
+الجمعة,عشاء,vegetable chicken soup,500.0,830.0,12.3,21.1,4.8,0.713
+الجمعة,وجبة خفيفة,pulled pork in barbecue sauce,85.0,355.0,32.8,46.7,11.0,0.72
+الجمعة,وجبة خفيفة,"Yogurt, Greek, 2% fat, key lime blend, CHOBANI",388.0,357.0,7.75,11.9,1.47,0.712
+السبت,فطور,"Yogurt, Greek, strawberry, DANNON OIKOS",500.0,530.0,8.25,11.7,2.92,0.72
+السبت,فطور,soy chips,500.0,545.0,7.5,15.0,2.1,0.627
+السبت,غداء,hot sour soup,500.0,455.0,6.0,10.1,2.8,0.72
+السبت,غداء,"Babyfood, cereal, high protein, with apple and orange, prepared with whole milk",500.0,560.0,6.9,13.4,3.9,0.534
+السبت,عشاء,"Yogurt, plain, low fat",500.0,315.0,5.25,7.04,1.55,0.72
+السبت,عشاء,vanilla soymilk,500.0,655.0,7.9,15.3,4.3,0.388
+السبت,وجبة خفيفة,vanilla soymilk light,430.0,357.0,6.4,9.4,2.1,0.72
+السبت,وجبة خفيفة,pasta marinara and ground beef sauce,500.0,205.0,2.5,4.1,1.6,0.255

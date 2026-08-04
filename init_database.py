@@ -1,0 +1,192 @@
+# ============================================================
+#  init_database.py — Initialize & Test the Database
+#
+#  Run this ONCE before starting the API server:
+#    python init_database.py
+#
+#  What it does:
+#    1. Checks all required packages are installed
+#    2. Creates the SQLite database file (dietary.db)
+#    3. Creates all tables (users, meal_logs, weekly_plans)
+#    4. Inserts a test user and verifies the query works
+#    5. Cleans up the test data
+# ============================================================
+
+import sys
+from pathlib import Path
+
+# ── Make sure we can import the api package ───────────────
+ROOT = Path(__file__).parent
+sys.path.insert(0, str(ROOT))
+
+
+# ════════════════════════════════════════════════════════════
+#  STEP 1 — Check packages
+# ════════════════════════════════════════════════════════════
+def check_packages():
+    required = {
+        "fastapi":      "fastapi",
+        "uvicorn":      "uvicorn",
+        "sqlalchemy":   "sqlalchemy",
+        "jose":         "python-jose[cryptography]",
+        "passlib":      "passlib[bcrypt]",
+        "pydantic":     "pydantic[email]",
+        "multipart":    "python-multipart",
+    }
+    print("\n[1/4] Checking packages...")
+    missing = []
+    for module, install_name in required.items():
+        try:
+            __import__(module)
+            print(f"  ✓  {module}")
+        except ImportError:
+            print(f"  ✗  {module}  ← missing")
+            missing.append(install_name)
+
+    if missing:
+        print(f"\n  Install missing packages with:")
+        print(f"  pip install {' '.join(missing)}")
+        print()
+        sys.exit(1)
+
+
+# ════════════════════════════════════════════════════════════
+#  STEP 2 — Create database & tables
+# ════════════════════════════════════════════════════════════
+def create_tables():
+    print("\n[2/4] Creating database tables...")
+
+    from api.database  import engine, Base, DATABASE_URL
+    from api.db_models import User, MealLog, WeeklyPlan   # registers models
+
+    Base.metadata.create_all(bind=engine)
+
+    db_file = DATABASE_URL.replace("sqlite:///", "")
+    print(f"  ✓  Database : {db_file}")
+    print(f"  ✓  Tables   : users, meal_logs, weekly_plans")
+
+    # Show column names for each table
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    for table in ["users", "meal_logs", "weekly_plans"]:
+        cols = [c["name"] for c in inspector.get_columns(table)]
+        print(f"       {table}: {', '.join(cols)}")
+
+
+# ════════════════════════════════════════════════════════════
+#  STEP 3 — Insert test record and query it back
+# ════════════════════════════════════════════════════════════
+def test_crud():
+    print("\n[3/4] Testing database read/write...")
+
+    from api.database  import SessionLocal
+    from api.db_models import User
+    from api.auth      import hash_password
+
+    db = SessionLocal()
+    try:
+        # --- CREATE ---
+        test_user = User(
+            email           = "test@dietary.local",
+            hashed_password = hash_password("test1234"),
+            name            = "Test User",
+            age             = 25,
+            gender          = "male",
+            weight          = 75.0,
+            height          = 175.0,
+            activity_level  = 2,
+            goal            = "maintain",
+            has_diabetes    = False,
+            has_bp          = False,
+            has_cholesterol = False,
+            allergies       = [],
+        )
+        db.add(test_user)
+        db.commit()
+        db.refresh(test_user)
+        print(f"  ✓  INSERT   — user id={test_user.id}, "
+              f"email={test_user.email}")
+
+        # --- READ ---
+        found = db.query(User).filter(
+            User.email == "test@dietary.local"
+        ).first()
+        assert found is not None
+        assert found.name == "Test User"
+        print(f"  ✓  SELECT   — found: {found.name}")
+
+        # --- UPDATE ---
+        found.weight = 76.5
+        db.commit()
+        db.refresh(found)
+        assert found.weight == 76.5
+        print(f"  ✓  UPDATE   — weight → {found.weight}")
+
+        # --- DELETE (cleanup) ---
+        db.delete(found)
+        db.commit()
+        gone = db.query(User).filter(
+            User.email == "test@dietary.local"
+        ).first()
+        assert gone is None
+        print(f"  ✓  DELETE   — test record removed")
+
+    except Exception as e:
+        db.rollback()
+        print(f"  ✗  Database test failed: {e}")
+        raise
+    finally:
+        db.close()
+
+
+# ════════════════════════════════════════════════════════════
+#  STEP 4 — Test JWT auth
+# ════════════════════════════════════════════════════════════
+def test_auth():
+    print("\n[4/4] Testing JWT authentication...")
+
+    from api.auth import hash_password, verify_password, create_token, decode_token
+
+    # Password hashing
+    raw      = "MyPassword123"
+    hashed   = hash_password(raw)
+    assert verify_password(raw, hashed),       "password verify failed"
+    assert not verify_password("wrong", hashed),"wrong password should fail"
+    print(f"  ✓  Password hashing & verification")
+
+    # Token creation & decoding
+    token   = create_token({"sub": "42"})
+    payload = decode_token(token)
+    assert payload is not None
+    assert payload["sub"] == "42"
+    print(f"  ✓  JWT create & decode")
+
+    # Invalid token
+    bad = decode_token("not.a.real.token")
+    assert bad is None
+    print(f"  ✓  Invalid token correctly rejected")
+
+
+# ════════════════════════════════════════════════════════════
+#  MAIN
+# ════════════════════════════════════════════════════════════
+if __name__ == "__main__":
+    print("=" * 52)
+    print("  Dietary System — Database Initialization")
+    print("=" * 52)
+
+    check_packages()
+    create_tables()
+    test_crud()
+    test_auth()
+
+    print("\n" + "=" * 52)
+    print("  All checks passed!")
+    print("  Database is ready.")
+    print()
+    print("  Start the API server:")
+    print("    python run_api.py")
+    print()
+    print("  Then open:")
+    print("    http://127.0.0.1:8000/docs")
+    print("=" * 52)
