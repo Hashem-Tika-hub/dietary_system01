@@ -1,0 +1,54 @@
+# --- Python & Environment Files ---
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+.pip-log/
+
+# --- Databases ---
+data/dietary.db
+*.db
+*.sqlite3
+
+# --- Flutter & Mobile Apps ---
+app/.dart_tool/
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/build/
+app/android/.gradle/
+app/android/local.properties
+app/android/app/ext/
+app/android/app/*.keystore
+app/android/app/*.jks
+app/ios/.generated/
+app/ios/Flutter/Ephemeral.xcconfig
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+app/ios/Pods/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+
+# --- IDE & OS Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

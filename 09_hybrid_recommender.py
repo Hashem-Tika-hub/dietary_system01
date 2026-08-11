@@ -38,6 +38,10 @@ MEALS   = ["breakfast","lunch","dinner","snack"]
 MEALS_AR = {"breakfast":"فطور","lunch":"غداء",
              "dinner":"عشاء","snack":"وجبة خفيفة"}
 
+# يظهر بدل اسم صنف حقيقي عندما تتعذّر تعبئة خانة إلزامية بعد الفلترة —
+# نص لا None حتى لا تنكسر أي شيفرة تتعامل مع الاسم كسلسلة (عرض/تصدير)
+MISSING_SLOT_LABEL = "(لا يوجد صنف مناسب)"
+
 
 class HybridRecommender:
     """
@@ -164,7 +168,19 @@ class HybridRecommender:
                 ~candidates["fdc_id"].isin([p["fdc_id"] for p in plate])
             ]
             if eligible.empty:
-                continue  # خانة اختيارية أو لا صنف مؤهل متبقٍّ — تجاوزها بدل كسر الخطة
+                if slot.get("optional", False):
+                    continue  # خانة اختيارية فعلاً — تجاوزها طبيعي وسليم
+                # خانة إلزامية (بروتين/نشويات/خضار...) بلا صنف مؤهل بعد
+                # الفلترة الصارمة — سجّلها صراحةً بدل إخفائها بصمت، حتى لا
+                # تخرج وجبة "كاملة" وهي في الحقيقة ناقصة خانة أساسية
+                plate.append({
+                    "fdc_id": None, "name": MISSING_SLOT_LABEL,
+                    "category": None, "food_group": slot["food_group"][0],
+                    "slot": slot["slot"], "portion_g": 0.0, "calories": 0.0,
+                    "protein": 0.0, "carbs": 0.0, "fat": 0.0,
+                    "hybrid_score": 0.0, "missing": True,
+                })
+                continue
 
             best = eligible.sort_values("hybrid_score", ascending=False).iloc[0]
             portion_g, portion_cal = meal_rules.compute_portion(
@@ -215,7 +231,8 @@ class HybridRecommender:
                     exclude_ids=used_ids[-25:] if used_ids else None
                 )
                 for item in plate:
-                    used_ids.append(item["fdc_id"])
+                    if item.get("fdc_id") is not None:   # تجاوز خانات "missing"
+                        used_ids.append(item["fdc_id"])
                 plan[day_name][meal] = plate
 
         return plan
@@ -224,12 +241,18 @@ class HybridRecommender:
         """تقرير تنوّع مختصر: كم صنف فريد استُخدم، وأكثر الأصناف تكرارًا"""
         from collections import Counter
         names = [f["name"] for meals in plan.values()
-                 for foods in meals.values() for f in foods]
+                 for foods in meals.values() for f in foods
+                 if not f.get("missing")]
         counts = Counter(names)
+        missing_count = sum(
+            1 for meals in plan.values()
+            for foods in meals.values() for f in foods if f.get("missing")
+        )
         return {
             "total_servings": len(names),
             "unique_foods": len(counts),
             "most_repeated": counts.most_common(5),
+            "missing_slots": missing_count,
         }
 
     def print_plan(self, plan: dict, user):
