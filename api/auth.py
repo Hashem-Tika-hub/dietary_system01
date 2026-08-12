@@ -10,9 +10,18 @@ from typing import Optional
 
 from jose import JWTError, jwt
 
-# ── Secret key — change this in production! ───────────────
-SECRET_KEY        = os.getenv("SECRET_KEY",
-                               "dietary-system-secret-key-2026-change-me")
+# ── Secret key ──────────────────────────────────────────────
+# لا fallback هنا عمدًا: أي قيمة افتراضية مكتوبة بالكود تصبح معروفة
+# للعامة بمجرد رفع المستودع، وأي حد يعرفها يقدر يزوّر token صالح
+# لأي مستخدم. لازم تتحدد فعليًا كمتغير بيئة (.env — غير مرفوع لـ git).
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY غير معرّف كمتغير بيئة. أنشئ قيمة عشوائية بـ:\n"
+        "  python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+        "وضعها في ملف .env (لا تُرفع لـ git — راجع .env.example) كـ:\n"
+        "  SECRET_KEY=<القيمة الناتجة>"
+    )
 ALGORITHM         = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 

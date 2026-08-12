@@ -1,53 +1,37 @@
-# --- Python & Environment Files ---
-venv/
+# ── أسرار / بيئة ──────────────────────────────────────────
 .env
+*.env
+!.env.example
+
+# ── Python ────────────────────────────────────────────────
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
+*.py[cod]
 *.egg-info/
-.installed.cfg
-.pip-log/
+.venv/
+venv/
+env/
 
-# --- Databases ---
+# ── قاعدة البيانات المحلية ────────────────────────────────
 data/dietary.db
-*.db
-*.sqlite3
+data/*.db
+data/*.sqlite3
 
-# --- Flutter & Mobile Apps ---
+# ── Flutter / Dart ────────────────────────────────────────
+# هذا اللي كان ناقص فعليًا — build/ سبق وانرفعت بالغلط
+# (app/android/build/reports/problems/problems-report.html)
+# بينما الكود المصدري نفسه (app/lib/*.dart) اتحذف بنفس الـ commit
 app/.dart_tool/
-app/.packages
-app/.pub-cache/
-app/.pub/
-app/build/
-app/android/.gradle/
-app/android/local.properties
-app/android/app/ext/
-app/android/app/*.keystore
-app/android/app/*.jks
-app/ios/.generated/
-app/ios/Flutter/Ephemeral.xcconfig
-app/ios/Flutter/Generated.xcconfig
-app/ios/Flutter/flutter_export_environment.sh
-app/ios/Pods/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/android/build/
+app/android/.gradle/
+app/ios/Pods/
+app/ios/.symlinks/
+app/*.iml
 
-# --- IDE & OS Files ---
+# ── IDE / نظام التشغيل ────────────────────────────────────
 .vscode/
 .idea/
 .DS_Store
