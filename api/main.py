@@ -4,6 +4,7 @@
 #  Docs:         http://127.0.0.1:8000/docs
 # ============================================================
 
+import os
 import sys
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -79,9 +80,18 @@ An intelligent API that suggests personalized meal plans using Machine Learning.
 )
 
 # ── CORS — allow Flutter app to connect ──────────────────
+# طلبات تطبيق الموبايل (native) ما تتأثر بـ CORS أصلاً — هذا يخص فقط
+# الوصول من متصفح (Swagger UI، أو نسخة Flutter web). القيمة الافتراضية
+# محصورة بـ localhost للتطوير؛ حدّد ALLOWED_ORIGINS كمتغير بيئة
+# (دومينات مفصولة بفاصلة) بمجرد نشر التطبيق فعليًا.
+_allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost,http://localhost:3000,http://127.0.0.1"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins  = ["*"],        # In production: ["https://yourapp.com"]
+    allow_origins  = _allowed_origins,
     allow_methods  = ["*"],
     allow_headers  = ["*"],
 )

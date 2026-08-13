@@ -5,6 +5,7 @@
 #  GET  /recommendations/history  — past weekly plans
 # ============================================================
 
+import logging
 from datetime import datetime
 from typing import List
 
@@ -23,6 +24,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import recommender_engine as engine
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
@@ -95,8 +98,9 @@ def recommend_meal(
         )
 
     except Exception as e:
+        logger.exception("Recommendation error")
         raise HTTPException(status_code=500,
-                            detail=f"Recommendation error: {str(e)}")
+                            detail="حدث خطأ أثناء توليد التوصية، حاول لاحقًا")
 
 
 @router.get("/weekly", response_model=WeeklyPlanResponse,
@@ -125,8 +129,9 @@ def get_current_weekly(
         return WeeklyPlanResponse(id=record.id, plan=plan, user_id=user.id,
                                    created_at=record.created_at)
     except Exception as e:
+        logger.exception("Weekly plan generation error")
         raise HTTPException(status_code=500,
-                            detail=f"Plan generation error: {str(e)}")
+                            detail="حدث خطأ أثناء توليد الخطة الأسبوعية، حاول لاحقًا")
 
 
 @router.post("/weekly", response_model=WeeklyPlanResponse,
@@ -144,8 +149,9 @@ def regenerate_weekly(
         return WeeklyPlanResponse(id=record.id, plan=plan, user_id=user.id,
                                    created_at=record.created_at)
     except Exception as e:
+        logger.exception("Weekly plan generation error")
         raise HTTPException(status_code=500,
-                            detail=f"Plan generation error: {str(e)}")
+                            detail="حدث خطأ أثناء توليد الخطة الأسبوعية، حاول لاحقًا")
 
 
 @router.post("/weekly/alternatives", response_model=List[FoodRecommendation],
@@ -171,7 +177,8 @@ def weekly_alternatives(
         )
         return [FoodRecommendation(**a) for a in alts]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Alternatives error: {str(e)}")
+        logger.exception("Alternatives error")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء توليد البدائل، حاول لاحقًا")
 
 
 @router.post("/weekly/swap", response_model=WeeklyPlanResponse,
@@ -200,7 +207,8 @@ def weekly_swap(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Swap error: {str(e)}")
+        logger.exception("Swap error")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء التبديل، حاول لاحقًا")
 
 
 @router.get("/history", summary="Get past weekly plans")

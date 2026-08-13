@@ -65,7 +65,7 @@ class UserUpdate(BaseModel):
     weight:         Optional[float] = Field(default=None, ge=30, le=300)
     height:         Optional[float] = Field(default=None, ge=100, le=250)
     activity_level: Optional[int]   = Field(default=None, ge=1, le=5)
-    goal:           Optional[str]   = None
+    goal:           Optional[str]   = Field(default=None, pattern="^(lose|maintain|gain|sport)$")
     has_diabetes:   Optional[bool]  = None
     has_bp:         Optional[bool]  = None
     has_cholesterol:Optional[bool]  = None

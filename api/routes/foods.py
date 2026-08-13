@@ -55,9 +55,9 @@ def list_foods(
 
     # Apply filters
     if q:
-        df = df[df["name"].str.contains(q, case=False, na=False)]
+        df = df[df["name"].str.contains(q, case=False, na=False, regex=False)]
     if category:
-        df = df[df["category"].str.contains(category, case=False, na=False)]
+        df = df[df["category"].str.contains(category, case=False, na=False, regex=False)]
     if max_calories is not None:
         df = df[df["calories"] <= max_calories]
     if min_protein is not None:
