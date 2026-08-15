@@ -17,11 +17,13 @@ bcrypt
 passlib
 python-multipart
 pydantic[email]
+slowapi
 
 # --- طبقة تعلّم الآلة (لتحميل النماذج المُدرَّبة وقت التشغيل) ---
 pandas
 numpy
 scikit-learn
+matplotlib
 
 # --- PostgreSQL (مطلوب فقط لو بدّلت DATABASE_URL من SQLite إلى Postgres
 #     — موصى به للنشر الفعلي، راجع DEPLOY.md قسم "قاعدة البيانات") ---
