@@ -5,7 +5,7 @@
 #  GET  /auth/me       — بيانات المستخدم الحالي
 # ============================================================
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from api.database    import get_db
@@ -13,13 +13,15 @@ from api.db_models   import User
 from api.schemas     import UserRegister, UserLogin, Token, UserResponse
 from api.auth        import hash_password, verify_password, create_token
 from api.dependencies import get_current_user
+from api.limiter      import limiter
 
 router = APIRouter(prefix="/auth", tags=["المصادقة"])
 
 
 @router.post("/register", response_model=Token, status_code=201,
              summary="تسجيل مستخدم جديد")
-def register(data: UserRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def register(request: Request, data: UserRegister, db: Session = Depends(get_db)):
     """
     تسجيل مستخدم جديد في النظام
 
@@ -63,7 +65,8 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token, summary="تسجيل الدخول")
-def login(data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, data: UserLogin, db: Session = Depends(get_db)):
     """
     تسجيل الدخول بالبريد وكلمة المرور
     يُرجع JWT Token صالح لمدة 30 يوم

@@ -11,6 +11,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
+
+from api.limiter import limiter
 
 # Add project root to Python path so we can import ML modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -78,6 +83,11 @@ An intelligent API that suggests personalized meal plans using Machine Learning.
     version     = "1.0.0",
     lifespan    = lifespan,
 )
+
+# ── Rate limiting — حماية /auth/login و/auth/register من brute force ──
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # ── CORS — allow Flutter app to connect ──────────────────
 # طلبات تطبيق الموبايل (native) ما تتأثر بـ CORS أصلاً — هذا يخص فقط
