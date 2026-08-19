@@ -19,6 +19,7 @@ passlib
 python-multipart
 pydantic[email]
 slowapi
+python-dotenv
 
 # --- طبقة تعلّم الآلة (لتحميل النماذج المُدرَّبة وقت التشغيل) ---
 pandas

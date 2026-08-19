@@ -8,6 +8,11 @@ import pickle
 from pathlib import Path
 from functools import lru_cache
 
+from api.services.recommendation_policy import (
+    effective_hybrid_weights,
+    ranking_basis,
+)
+
 BASE  = Path(__file__).parent
 MODEL = BASE / "models"
 
@@ -43,8 +48,8 @@ def get_engine() -> HybridRecommender:
 
 
 def build_user(data: dict) -> UserProfile:
-    """بناء كائن UserProfile من dict قادم من API"""
-    return UserProfile(
+    """بناء كائن UserProfile من dict قادم من API."""
+    user = UserProfile(
         name            = data.get("name", "users"),
         age             = data["age"],
         gender          = data.get("gender", "male"),
@@ -61,6 +66,30 @@ def build_user(data: dict) -> UserProfile:
         cuisine_style   = data.get("cuisine_style", "مزيج"),
         allow_treats    = data.get("allow_treats", False),
     )
+    # These fields are operational evidence for ranking only. They are not
+    # medical data and do not override hard food-safety filters.
+    user.interaction_count = max(0, int(data.get("interaction_count", 0)))
+    user.collaborative_signals_ready = bool(
+        data.get("collaborative_signals_ready", False)
+    )
+    return user
+
+
+def get_ranking_metadata(user_data: dict) -> dict:
+    """Explain whether the active ranker is content-based or truly hybrid."""
+    user = build_user(user_data)
+    engine = get_engine()
+    weights = effective_hybrid_weights(
+        configured_content_weight=engine.cbf_weight,
+        configured_collaborative_weight=engine.cf_weight,
+        interaction_count=user.interaction_count,
+        collaborative_signals_ready=user.collaborative_signals_ready,
+    )
+    return {
+        "ranking_basis": ranking_basis(weights),
+        "content_weight": weights.content,
+        "collaborative_weight": weights.collaborative,
+    }
 
 
 def recommend_meal(user_data: dict, meal: str, top_k: int = 5) -> list:

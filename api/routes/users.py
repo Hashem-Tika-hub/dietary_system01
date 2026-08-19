@@ -11,13 +11,15 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from api.database     import get_db
 from api.db_models    import User, MealLog
 from api.schemas      import (UserResponse, UserUpdate,
                                NutritionTargets, MealTarget,
-                               MealLogCreate, MealLogResponse)
+                               MealLogCreate, MealLogUpdate, MealLogResponse,
+                               MealLogSummary)
 from api.dependencies import get_current_user
 import sys
 from pathlib import Path
@@ -96,6 +98,34 @@ def get_meal_logs(
     return logs
 
 
+@router.get("/meal-logs/summary", response_model=MealLogSummary,
+            summary="ملخص استهلاك الوجبات")
+def get_meal_log_summary(
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """يحسِب مجموع المغذيات في سجلات المستخدم ضمن نافذة زمنية اختيارية."""
+    query = db.query(MealLog).filter(MealLog.user_id == user.id)
+    if date_from:
+        query = query.filter(MealLog.date >= date_from)
+    if date_to:
+        query = query.filter(MealLog.date <= date_to)
+
+    count, calories, protein, carbs, fat = query.with_entities(
+        func.count(MealLog.id),
+        func.coalesce(func.sum(MealLog.calories), 0.0),
+        func.coalesce(func.sum(MealLog.protein), 0.0),
+        func.coalesce(func.sum(MealLog.carbs), 0.0),
+        func.coalesce(func.sum(MealLog.fat), 0.0),
+    ).one()
+    return MealLogSummary(
+        count=int(count), calories=float(calories), protein=float(protein),
+        carbs=float(carbs), fat=float(fat),
+    )
+
+
 @router.post("/meal-logs", response_model=MealLogResponse,
              status_code=201, summary="تسجيل وجبة جديدة")
 def add_meal_log(
@@ -126,3 +156,43 @@ def delete_meal_log(
         raise HTTPException(status_code=404, detail="السجل غير موجود")
     db.delete(log)
     db.commit()
+
+
+@router.get("/meal-logs/{log_id}", response_model=MealLogResponse,
+            summary="عرض سجل وجبة")
+def get_meal_log(
+    log_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """يرجع سجلًا واحدًا يملكه المستخدم الحالي، أو 404 دون كشف سجلات غيره."""
+    log = db.query(MealLog).filter(
+        MealLog.id == log_id,
+        MealLog.user_id == user.id,
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="السجل غير موجود")
+    return log
+
+
+@router.patch("/meal-logs/{log_id}", response_model=MealLogResponse,
+              summary="تحديث سجل وجبة")
+def update_meal_log(
+    log_id: int,
+    updates: MealLogUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """يحدّث الحقول المرسلة فقط بعد التحقق من ملكية السجل."""
+    log = db.query(MealLog).filter(
+        MealLog.id == log_id,
+        MealLog.user_id == user.id,
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="السجل غير موجود")
+
+    for field, value in updates.model_dump(exclude_none=True).items():
+        setattr(log, field, value)
+    db.commit()
+    db.refresh(log)
+    return log

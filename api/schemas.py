@@ -163,6 +163,9 @@ class MealRecommendationResponse(BaseModel):
     meal_label:    str
     target_calories: float
     recommendations: List[FoodRecommendation]
+    ranking_basis: str = "content_based"
+    content_weight: float = 1.0
+    collaborative_weight: float = 0.0
 
 
 class WeeklyPlanResponse(BaseModel):
@@ -196,14 +199,29 @@ class SwapRequest(BaseModel):
 
 class MealLogCreate(BaseModel):
     meal_type:  str   = Field(pattern="^(breakfast|lunch|dinner|snack)$")
-    food_name:  str
-    fdc_id:     str   = ""
+    food_name:  str   = Field(min_length=1, max_length=255)
+    fdc_id:     str   = Field(default="", max_length=50)
     portion_g:  float = Field(default=100, ge=1)
-    calories:   float = 0
-    protein:    float = 0
-    carbs:      float = 0
-    fat:        float = 0
-    notes:      str   = ""
+    calories:   float = Field(default=0, ge=0)
+    protein:    float = Field(default=0, ge=0)
+    carbs:      float = Field(default=0, ge=0)
+    fat:        float = Field(default=0, ge=0)
+    notes:      str   = Field(default="", max_length=1000)
+
+
+class MealLogUpdate(BaseModel):
+    """تحديث جزئي لسجل وجبة يخص المستخدم الحالي فقط."""
+    meal_type: Optional[str] = Field(
+        default=None, pattern="^(breakfast|lunch|dinner|snack)$"
+    )
+    food_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    fdc_id: Optional[str] = Field(default=None, max_length=50)
+    portion_g: Optional[float] = Field(default=None, ge=1)
+    calories: Optional[float] = Field(default=None, ge=0)
+    protein: Optional[float] = Field(default=None, ge=0)
+    carbs: Optional[float] = Field(default=None, ge=0)
+    fat: Optional[float] = Field(default=None, ge=0)
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 
 class MealLogResponse(MealLogCreate):
@@ -212,6 +230,15 @@ class MealLogResponse(MealLogCreate):
     date:     datetime
 
     model_config = {"from_attributes": True}
+
+
+class MealLogSummary(BaseModel):
+    """ملخص استهلاك وجبات المستخدم ضمن نافذة زمنية اختيارية."""
+    count: int
+    calories: float
+    protein: float
+    carbs: float
+    fat: float
 
 
 # ══════════════════════════════════════════════════════════

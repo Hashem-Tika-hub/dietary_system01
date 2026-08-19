@@ -57,6 +57,44 @@ def _categories_for_tags(tags: list) -> set:
     return cats
 
 
+# Compatibility aliases for legacy profile values. New catalog imports should
+# store canonical allergen codes such as ``allergen.milk`` directly.
+ALLERGEN_CODE_ALIASES = {
+    "ألبان": {"allergen.milk"},
+    "حليب": {"allergen.milk"},
+    "بيض": {"allergen.egg"},
+    "مكسرات": {"allergen.nuts", "allergen.tree_nuts", "allergen.peanut"},
+    "فول سوداني": {"allergen.peanut"},
+    "قمح": {"allergen.wheat"},
+    "جلوتين": {"allergen.wheat", "allergen.gluten"},
+}
+
+
+def declared_allergen_codes(allergies: list) -> set:
+    """Return canonical allergen codes for declared allergy values."""
+    codes = set()
+    for value in allergies or []:
+        key = str(value).strip().lower()
+        if key.startswith("allergen."):
+            codes.add(key)
+        else:
+            codes.update(ALLERGEN_CODE_ALIASES.get(str(value).strip(), set()))
+    return codes
+
+
+def _as_code_set(value) -> set:
+    """Normalize list/set/comma-delimited catalog allergen values."""
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return set()
+    if isinstance(value, (list, tuple, set)):
+        return {str(item).strip().lower() for item in value if str(item).strip()}
+    return {item.strip().lower() for item in str(value).split(",") if item.strip()}
+
+
+def _has_allergen_conflict(value, declared_codes: set) -> bool:
+    return bool(_as_code_set(value) & declared_codes)
+
+
 # ── قوالب الطبق لكل مناسبة (Exchange Lists + MyPlate) ─────────
 # كل قالب = قائمة "خانات"، كل خانة لها food_group مطلوب ونسبة من هدف
 # سعرات الوجبة. الخانات غير الأساسية (optional) تُهمَل لو لا يوجد صنف مناسب.
@@ -155,11 +193,20 @@ def apply_hard_filters(df: pd.DataFrame, user, meal: str = None) -> pd.DataFrame
 
     flags = user.get_health_flags() if hasattr(user, "get_health_flags") else {}
 
-    # 2) الحساسية الطبية (allergies) — استبعاد كامل
-    exclude_cats = _categories_for_tags(flags.get("allergies", []))
-    # 3) عدم الرغبة الشخصية (dislikes) — نفس آلية الاستبعاد، سبب مختلف
-    exclude_cats |= _categories_for_tags(getattr(user, "dislikes", []) or [])
+    # 2) الحساسية الطبية — استبعاد كامل. عندما تأتي المرشحات من
+    # كتالوج موثق، استخدم رموز مسببات الحساسية بدل التخمين من الفئة.
+    declared_codes = declared_allergen_codes(flags.get("allergies", []))
+    if declared_codes and "allergen_codes" in out.columns:
+        out = out[
+            ~out["allergen_codes"].apply(
+                lambda value: _has_allergen_conflict(value, declared_codes)
+            )
+        ]
 
+    # 3) توافق احتياطي مع CSV القديم: بعض الحساسيات كانت ممثلة بفئة الطعام.
+    # لا يحل ذلك محل بيانات المكونات/الحساسية الموثقة في الكتالوج الجديد.
+    exclude_cats = _categories_for_tags(flags.get("allergies", []))
+    exclude_cats |= _categories_for_tags(getattr(user, "dislikes", []) or [])
     if exclude_cats and "category" in out.columns:
         out = out[~out["category"].isin(exclude_cats)]
 
