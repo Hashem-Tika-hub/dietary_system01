@@ -1,0 +1,5 @@
+# Development and test tooling for Dietary System.
+# Install after the production dependency set when working locally.
+-r requirements-deploy.txt
+pytest
+pytest-cov

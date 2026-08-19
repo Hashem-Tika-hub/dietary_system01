@@ -20,7 +20,7 @@ from api.limiter import limiter
 # Add project root to Python path so we can import ML modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from api.database import init_db
+from api.database import assert_database_schema_is_current
 import recommender_engine as rec_engine
 
 
@@ -29,15 +29,16 @@ import recommender_engine as rec_engine
 async def lifespan(app: FastAPI):
     """
     Runs once at startup:
-      1. Creates database tables
+      1. Verifies that Alembic prepared the database schema
       2. Loads ML models into memory (stays loaded for all requests)
     """
     print("=" * 52)
     print("  Dietary Recommendation API — Starting up")
     print("=" * 52)
 
-    print("  [1/2] Initializing database...")
-    init_db()
+    print("  [1/2] Verifying database migrations...")
+    assert_database_schema_is_current()
+    print("  ✓ Database schema is managed by Alembic")
 
     print("  [2/2] Loading ML models...")
     try:
