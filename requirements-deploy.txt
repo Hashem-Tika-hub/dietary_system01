@@ -12,6 +12,7 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+alembic
 python-jose[cryptography]
 bcrypt
 passlib
