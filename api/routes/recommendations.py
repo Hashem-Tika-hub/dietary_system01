@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.database     import get_db
-from api.db_models    import User, WeeklyPlan
+from api.db_models    import User, MealLog, WeeklyPlan
 from api.schemas      import (MealRequest, MealRecommendationResponse,
                                FoodRecommendation, WeeklyPlanResponse,
                                SwapAlternativesRequest, SwapRequest)
@@ -37,7 +37,13 @@ MEAL_LABELS = {
 }
 
 
-def _user_dict(user: User) -> dict:
+def _user_dict(user: User, db: Session | None = None) -> dict:
+    interaction_count = 0
+    if db is not None:
+        interaction_count = db.query(MealLog).filter(
+            MealLog.user_id == user.id
+        ).count()
+
     return {
         "name":            user.name,
         "age":             user.age,
@@ -54,6 +60,10 @@ def _user_dict(user: User) -> dict:
         "favorites":       user.favorites or [],
         "cuisine_style":   user.cuisine_style or "مزيج",
         "allow_treats":    user.allow_treats or False,
+        "interaction_count": interaction_count,
+        # Meal logs are not preference labels. This remains false until an
+        # explicit, consented feedback pipeline is implemented.
+        "collaborative_signals_ready": False,
     }
 
 
@@ -67,13 +77,16 @@ def recommend_meal(
     """
     Returns top-K food recommendations for a specific meal.
 
-    - Applies health filters (diabetes, blood pressure, allergies)
-    - Uses CBF (60%) + CF (40%) hybrid scoring
-    - Includes suggested portion size in grams
+    - Applies hard health and allergy filters before ranking
+    - Uses content-based ranking by default; hybrid CF is enabled only after
+      a future consented feedback pipeline declares real signals available
+    - Includes suggested portion size in grams and ranking metadata
     """
     try:
-        items = engine.recommend_meal(_user_dict(user), req.meal, req.top_k)
-        targets = engine.get_user_targets(_user_dict(user))
+        user_data = _user_dict(user, db)
+        items = engine.recommend_meal(user_data, req.meal, req.top_k)
+        targets = engine.get_user_targets(user_data)
+        ranking = engine.get_ranking_metadata(user_data)
         meal_cal = targets["meal_targets"][req.meal]["calories"]
 
         recs = [FoodRecommendation(
@@ -95,6 +108,7 @@ def recommend_meal(
             meal_label      = MEAL_LABELS.get(req.meal, req.meal),
             target_calories = meal_cal,
             recommendations = recs,
+            **ranking,
         )
 
     except Exception as e:
@@ -123,7 +137,7 @@ def get_current_weekly(
                                    user_id=user.id, created_at=existing.created_at)
 
     try:
-        plan = engine.generate_weekly_plan(_user_dict(user))
+        plan = engine.generate_weekly_plan(_user_dict(user, db))
         record = WeeklyPlan(user_id=user.id, plan_data=plan)
         db.add(record); db.commit(); db.refresh(record)
         return WeeklyPlanResponse(id=record.id, plan=plan, user_id=user.id,
@@ -143,7 +157,7 @@ def regenerate_weekly(
     """يولّد خطة أسبوعية جديدة كليًا ويحفظها كأحدث خطة — يُستخدم فقط عند
     ضغط المستخدم على زر "توليد خطة جديدة" الصريح."""
     try:
-        plan = engine.generate_weekly_plan(_user_dict(user))
+        plan = engine.generate_weekly_plan(_user_dict(user, db))
         record = WeeklyPlan(user_id=user.id, plan_data=plan)
         db.add(record); db.commit(); db.refresh(record)
         return WeeklyPlanResponse(id=record.id, plan=plan, user_id=user.id,
@@ -173,7 +187,7 @@ def weekly_alternatives(
 
     try:
         alts = engine.get_swap_alternatives(
-            _user_dict(user), req.meal, req.slot, current_fdc
+            _user_dict(user, db), req.meal, req.slot, current_fdc
         )
         return [FoodRecommendation(**a) for a in alts]
     except Exception as e:
@@ -197,7 +211,7 @@ def weekly_swap(
     try:
         updated = engine.swap_meal_item(
             dict(plan_row.plan_data), req.day, req.meal, req.slot,
-            req.new_fdc_id, _user_dict(user)
+            req.new_fdc_id, _user_dict(user, db)
         )
         plan_row.plan_data = updated
         flag_modified(plan_row, "plan_data")  # عمود JSON — SQLAlchemy لا يتتبّع التعديل داخل نفس الكائن تلقائيًا

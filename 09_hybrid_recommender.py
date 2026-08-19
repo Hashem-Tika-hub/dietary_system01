@@ -13,6 +13,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from config import DATA_DIR, MODEL_DIR
+from api.services.recommendation_policy import (
+    blend_candidate_scores,
+    effective_hybrid_weights,
+)
 
 import importlib.util
 
@@ -109,29 +113,29 @@ class HybridRecommender:
         if cbf_recs.empty:
             return cbf_recs.assign(hybrid_score=pd.Series(dtype=float))
 
-        def norm(series):
-            mn, mx = series.min(), series.max()
-            if mx == mn:
-                return series * 0 + 0.5
-            return (series - mn) / (mx - mn)
-
-        cbf_recs["cbf_norm"] = norm(cbf_recs["raw_cbf"])
         cf_small = cf_recs[["fdc_id", "raw_cf"]].copy()
-        cf_small["cf_norm"] = norm(cf_small["raw_cf"]) if not cf_small.empty else []
-
         merged = pd.merge(
             cbf_recs[["fdc_id", "name", "category", "food_group",
                       "calories", "protein", "carbs", "fat", "fiber",
-                      "health_score", "cbf_norm"]],
-            cf_small[["fdc_id", "cf_norm"]],
+                      "health_score", "raw_cbf"]],
+            cf_small,
             on="fdc_id", how="left"
-        ).fillna({"cf_norm": 0.3})
-
-        merged["hybrid_score"] = (
-            self.cbf_weight * merged["cbf_norm"] +
-            self.cf_weight * merged["cf_norm"]
         )
-        return merged
+
+        # The bundled CF model is trained from synthetic ratings. Until the
+        # application records real, consented feedback, ranking stays fully
+        # content-based instead of presenting synthetic correlations as user
+        # preference. The policy becomes hybrid only when a future feedback
+        # pipeline marks the evidence as ready.
+        weights = effective_hybrid_weights(
+            configured_content_weight=self.cbf_weight,
+            configured_collaborative_weight=self.cf_weight,
+            interaction_count=getattr(user, "interaction_count", 0),
+            collaborative_signals_ready=getattr(
+                user, "collaborative_signals_ready", False
+            ),
+        )
+        return blend_candidate_scores(merged, weights=weights)
 
     def recommend_meal(self,
                        user,
