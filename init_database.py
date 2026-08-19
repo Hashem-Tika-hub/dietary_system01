@@ -6,12 +6,12 @@
 #
 #  What it does:
 #    1. Checks all required packages are installed
-#    2. Creates the SQLite database file (dietary.db)
-#    3. Creates all tables (users, meal_logs, weekly_plans)
-#    4. Inserts a test user and verifies the query works
-#    5. Cleans up the test data
+#    2. Applies the versioned Alembic schema migrations
+#    3. Inserts a test user and verifies the query works
+#    4. Cleans up the test data
 # ============================================================
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -28,6 +28,7 @@ def check_packages():
         "fastapi":      "fastapi",
         "uvicorn":      "uvicorn",
         "sqlalchemy":   "sqlalchemy",
+        "alembic":      "alembic",
         "jose":         "python-jose[cryptography]",
         "passlib":      "passlib[bcrypt]",
         "pydantic":     "pydantic[email]",
@@ -51,18 +52,22 @@ def check_packages():
 
 
 # ════════════════════════════════════════════════════════════
-#  STEP 2 — Create database & tables
+#  STEP 2 — Apply database migrations
 # ════════════════════════════════════════════════════════════
-def create_tables():
-    print("\n[2/4] Creating database tables...")
+def apply_migrations():
+    print("\n[2/4] Applying database migrations...")
 
-    from api.database  import engine, Base, DATABASE_URL
-    from api.db_models import User, MealLog, WeeklyPlan   # registers models
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=ROOT,
+        check=True,
+    )
 
-    Base.metadata.create_all(bind=engine)
+    from api.database import engine, DATABASE_URL
 
     db_file = DATABASE_URL.replace("sqlite:///", "")
     print(f"  ✓  Database : {db_file}")
+    print(f"  ✓  Schema   : managed by Alembic")
     print(f"  ✓  Tables   : users, meal_logs, weekly_plans")
 
     # Show column names for each table
@@ -176,7 +181,7 @@ if __name__ == "__main__":
     print("=" * 52)
 
     check_packages()
-    create_tables()
+    apply_migrations()
     test_crud()
     test_auth()
 
