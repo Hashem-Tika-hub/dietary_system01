@@ -72,6 +72,11 @@ def build_user(data: dict) -> UserProfile:
     user.collaborative_signals_ready = bool(
         data.get("collaborative_signals_ready", False)
     )
+    # Scores are keyed by the candidate's external food identifier and are
+    # sourced only from explicit user feedback after readiness has passed.
+    user.explicit_collaborative_scores = dict(
+        data.get("explicit_collaborative_scores", {})
+    )
     return user
 
 

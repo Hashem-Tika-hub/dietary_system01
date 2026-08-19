@@ -118,7 +118,8 @@ def test_meal_recommendation_exposes_active_ranking_policy(
     response = client.post("/recommendations/meal", json={"meal": "lunch", "top_k": 3})
 
     assert response.status_code == 200
-    assert captured["user_data"]["interaction_count"] == 1
+    # A meal log is consumption history, not explicit preference evidence.
+    assert captured["user_data"]["interaction_count"] == 0
     assert captured["user_data"]["collaborative_signals_ready"] is False
     assert response.json()["ranking_basis"] == "content_based"
     assert response.json()["content_weight"] == 1.0

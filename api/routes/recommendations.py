@@ -14,7 +14,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.database     import get_db
-from api.db_models    import User, MealLog, WeeklyPlan
+from api.db_models    import User, Food, UserFoodFeedback, WeeklyPlan
+from api.services.feedback_collaborative_filter import (
+    ExplicitFeedbackCollaborativeFilter,
+    FeedbackRecord,
+)
 from api.schemas      import (MealRequest, MealRecommendationResponse,
                                FoodRecommendation, WeeklyPlanResponse,
                                SwapAlternativesRequest, SwapRequest)
@@ -39,10 +43,31 @@ MEAL_LABELS = {
 
 def _user_dict(user: User, db: Session | None = None) -> dict:
     interaction_count = 0
+    collaborative_signals_ready = False
+    explicit_collaborative_scores: dict[str, float] = {}
+
     if db is not None:
-        interaction_count = db.query(MealLog).filter(
-            MealLog.user_id == user.id
-        ).count()
+        feedback_rows = db.query(UserFoodFeedback).all()
+        feedback_filter = ExplicitFeedbackCollaborativeFilter().fit(
+            FeedbackRecord(
+                user_id=row.user_id, food_id=row.food_id, score=row.score
+            )
+            for row in feedback_rows
+        )
+        readiness = feedback_filter.readiness_for(user.id)
+        interaction_count = readiness.target_user_interactions
+        collaborative_signals_ready = readiness.ready
+
+        if readiness.ready:
+            scores_by_food_id = feedback_filter.score_unseen_foods(user.id)
+            if scores_by_food_id:
+                catalog_foods = db.query(Food).filter(
+                    Food.id.in_(scores_by_food_id), Food.is_active.is_(True)
+                ).all()
+                explicit_collaborative_scores = {
+                    str(food.external_id): scores_by_food_id[food.id]
+                    for food in catalog_foods
+                }
 
     return {
         "name":            user.name,
@@ -61,9 +86,8 @@ def _user_dict(user: User, db: Session | None = None) -> dict:
         "cuisine_style":   user.cuisine_style or "مزيج",
         "allow_treats":    user.allow_treats or False,
         "interaction_count": interaction_count,
-        # Meal logs are not preference labels. This remains false until an
-        # explicit, consented feedback pipeline is implemented.
-        "collaborative_signals_ready": False,
+        "collaborative_signals_ready": collaborative_signals_ready,
+        "explicit_collaborative_scores": explicit_collaborative_scores,
     }
 
 
@@ -78,8 +102,8 @@ def recommend_meal(
     Returns top-K food recommendations for a specific meal.
 
     - Applies hard health and allergy filters before ranking
-    - Uses content-based ranking by default; hybrid CF is enabled only after
-      a future consented feedback pipeline declares real signals available
+    - Uses content-based ranking by default; hybrid CF activates only after
+      enough explicit, consented feedback records pass the readiness gate
     - Includes suggested portion size in grams and ranking metadata
     """
     try:

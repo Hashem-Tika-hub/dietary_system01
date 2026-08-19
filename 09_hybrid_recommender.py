@@ -2,8 +2,8 @@
 #  09_hybrid_recommender.py — النظام الهجين الكامل
 #  الأمر: python 09_hybrid_recommender.py
 #
-#  هذا هو قلب المشروع — يجمع كل النماذج معاً:
-#  CBF (60%) + CF (40%) → فلترة صحية → خطة أسبوعية
+#  قلب التوصية: CBF افتراضيًا، ثم CF قائم على تفاعل صريح حقيقي عند الجاهزية
+#  القيود الصحية الصلبة → ترتيب آمن → خطة أسبوعية
 # ============================================================
 
 import pickle
@@ -70,30 +70,23 @@ class HybridRecommender:
         self.is_ready = False
 
     def load_models(self):
-        """تحميل نماذج CBF و CF المحفوظة"""
+        """تحميل نموذج المحتوى وتجهيز الترتيب التعاوني الصريح عند الجاهزية."""
         cbf_path = MODEL_DIR / "cbf_model.pkl"
-        cf_path  = MODEL_DIR / "cf_model.pkl"
-
         if not cbf_path.exists():
             raise FileNotFoundError(
                 "cbf_model.pkl غير موجود! شغّل: python 07_cbf_model.py"
             )
-        if not cf_path.exists():
-            raise FileNotFoundError(
-                "cf_model.pkl غير موجود! شغّل: python 08_cf_model.py"
-            )
 
-        # تحميل CBF
+        # تحميل نموذج المحتوى، وهو بديل cold-start الآمن. لا يُحمَّل نموذج
+        # CF القديم لأنه مُدرَّب على تقييمات مصطنعة؛ درجات CF الصحيحة تأتي
+        # لاحقًا من تفاعلات صريحة حقيقية عبر ExplicitFeedbackCollaborativeFilter.
         cbf_mod = _import("07_cbf_model.py", "cbf_mod")
         self.cbf = cbf_mod.ContentBasedFilter.load(cbf_path)
-
-        # تحميل CF
-        cf_mod  = _import("08_cf_model.py", "cf_mod")
-        self.cf = cf_mod.CollaborativeFilter.load(cf_path)
+        self.cf = None
 
         self.is_ready = True
         print("  ✓ نموذج CBF loaded")
-        print("  ✓ نموذج CF  loaded")
+        print("  ✓ Explicit-feedback CF will activate when data is ready")
 
     def _score_candidates(self, user, meal: str,
                            exclude_ids: list = None) -> pd.DataFrame:
@@ -106,14 +99,22 @@ class HybridRecommender:
         cbf_recs = self.cbf.recommend(
             user, meal=meal, top_k=pool, exclude_ids=exclude_ids
         ).rename(columns={"cbf_score": "raw_cbf"})
-        cf_recs = self.cf.recommend(
-            user, meal=meal, top_k=pool, exclude_ids=exclude_ids
-        ).rename(columns={"cf_score": "raw_cf"})
-
         if cbf_recs.empty:
             return cbf_recs.assign(hybrid_score=pd.Series(dtype=float))
+        cbf_recs["fdc_id"] = cbf_recs["fdc_id"].astype(str)
 
-        cf_small = cf_recs[["fdc_id", "raw_cf"]].copy()
+        # Never reuse the legacy CF model trained on synthetic ratings. When
+        # the explicit-feedback model is ready, API code supplies its scores
+        # keyed by external food identifiers; otherwise this frame is empty
+        # and policy weights force content-based ranking.
+        explicit_scores = getattr(user, "explicit_collaborative_scores", {})
+        cf_small = pd.DataFrame(
+            [
+                {"fdc_id": str(food_id), "raw_cf": float(score)}
+                for food_id, score in explicit_scores.items()
+            ],
+            columns=["fdc_id", "raw_cf"],
+        )
         merged = pd.merge(
             cbf_recs[["fdc_id", "name", "category", "food_group",
                       "calories", "protein", "carbs", "fat", "fiber",
@@ -122,11 +123,9 @@ class HybridRecommender:
             on="fdc_id", how="left"
         )
 
-        # The bundled CF model is trained from synthetic ratings. Until the
-        # application records real, consented feedback, ranking stays fully
-        # content-based instead of presenting synthetic correlations as user
-        # preference. The policy becomes hybrid only when a future feedback
-        # pipeline marks the evidence as ready.
+        # Explicit feedback is the only valid source of collaborative scores.
+        # Hard eligibility filters have already run inside the content model,
+        # so no collaborative score can introduce an unsafe candidate.
         weights = effective_hybrid_weights(
             configured_content_weight=self.cbf_weight,
             configured_collaborative_weight=self.cf_weight,

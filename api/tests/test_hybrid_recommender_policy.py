@@ -47,9 +47,16 @@ class StubModel:
 
 
 class StubUser:
-    def __init__(self, *, interaction_count: int, collaborative_signals_ready: bool):
+    def __init__(
+        self,
+        *,
+        interaction_count: int,
+        collaborative_signals_ready: bool,
+        explicit_collaborative_scores: dict[str, float] | None = None,
+    ):
         self.interaction_count = interaction_count
         self.collaborative_signals_ready = collaborative_signals_ready
+        self.explicit_collaborative_scores = explicit_collaborative_scores or {}
 
 
 def build_hybrid(*, cbf_weight: float = 0.6, cf_weight: float = 0.4):
@@ -60,15 +67,19 @@ def build_hybrid(*, cbf_weight: float = 0.6, cf_weight: float = 0.4):
     recommender.cbf = StubModel(
         {"content-first": 0.95, "cf-first": 0.20}, "cbf_score"
     )
-    recommender.cf = StubModel(
-        {"content-first": 0.01, "cf-first": 0.99}, "cf_score"
-    )
+    # Legacy synthetic CF is deliberately not injected: the hybrid layer must
+    # use only explicit scores supplied by the feedback data pipeline.
     return recommender
 
 
 def test_hybrid_recommender_defaults_to_content_ranking_without_feedback() -> None:
     ranked = build_hybrid()._score_candidates(
-        StubUser(interaction_count=100, collaborative_signals_ready=False), "lunch"
+        StubUser(
+            interaction_count=100,
+            collaborative_signals_ready=False,
+            explicit_collaborative_scores={"content-first": 0.01, "cf-first": 0.99},
+        ),
+        "lunch",
     )
 
     assert ranked.iloc[0]["fdc_id"] == "content-first"
@@ -76,7 +87,12 @@ def test_hybrid_recommender_defaults_to_content_ranking_without_feedback() -> No
 
 def test_hybrid_recommender_uses_cf_only_after_feedback_is_declared_ready() -> None:
     ranked = build_hybrid(cbf_weight=0.4, cf_weight=0.6)._score_candidates(
-        StubUser(interaction_count=5, collaborative_signals_ready=True), "lunch"
+        StubUser(
+            interaction_count=5,
+            collaborative_signals_ready=True,
+            explicit_collaborative_scores={"content-first": 0.01, "cf-first": 0.99},
+        ),
+        "lunch",
     )
 
     assert ranked.iloc[0]["fdc_id"] == "cf-first"

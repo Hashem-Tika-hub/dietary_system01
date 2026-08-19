@@ -242,6 +242,37 @@ class MealLogSummary(BaseModel):
 
 
 # ══════════════════════════════════════════════════════════
+#  التفاعلات الصريحة للتوصية التعاونية
+# ══════════════════════════════════════════════════════════
+
+class FoodFeedbackUpsert(BaseModel):
+    """إشارة صريحة يختارها المستخدم عن طعام من الكتالوج الموثق."""
+    food_id: int = Field(gt=0)
+    event_type: str = Field(pattern="^(like|dislike|save|not_interested)$")
+
+
+class FoodFeedbackResponse(BaseModel):
+    id: int
+    user_id: int
+    food_id: int
+    event_type: str
+    score: float
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CollaborativeReadinessResponse(BaseModel):
+    ready: bool
+    reason: str
+    interaction_count: int
+    unique_users: int
+    unique_foods: int
+    target_user_interactions: int
+
+
+# ══════════════════════════════════════════════════════════
 #  الأطعمة
 # ══════════════════════════════════════════════════════════
 
