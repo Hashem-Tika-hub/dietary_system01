@@ -34,10 +34,13 @@ class AppConfig {
   // سبب خطأ "DioException connection error / XMLHttpRequest onError"
   // لو تختبر بـ `flutter run -d chrome`.
   //
-  // على جهاز حقيقي (لا محاكي ولا متصفح على نفس الجهاز): بدّل السطرين
-  // أدناه بعنوان IP جهازك بالشبكة المحلية، مثلاً 'http://192.168.1.5:8000'
-  // بدلاً من http://10.0.2.2:8000
-static const String baseUrl = 'https://dietarysystem-production.up.railway.app';
+  // يستخدم APK عنوان الإنتاج الافتراضي الحالي، ويمكن بناء نسخة V2 بعنوان
+  // مختلف من دون تعديل الشفرة، مثال:
+  // flutter build apk --release --dart-define=API_BASE_URL=https://api-v2.example.com
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://dietarysystem-production.up.railway.app',
+  );
 
   // Request timeout
   static const int timeoutSeconds = 15;
