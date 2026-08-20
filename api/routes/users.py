@@ -20,7 +20,8 @@ from api.schemas      import (UserResponse, UserUpdate,
                                NutritionTargets, MealTarget,
                                MealLogCreate, MealLogUpdate, MealLogResponse,
                                MealLogSummary, FoodFeedbackUpsert,
-                               FoodFeedbackResponse, CollaborativeReadinessResponse)
+                               FoodFeedbackResponse, CollaborativeReadinessResponse,
+                               validate_body_profile_sanity)
 from api.services.feedback_collaborative_filter import (
     ExplicitFeedbackCollaborativeFilter,
     FeedbackRecord,
@@ -66,6 +67,18 @@ def update_profile(
     تحديث جزئي — يمكنك إرسال أي حقل تريد تغييره فقط
     """
     data = updates.model_dump(exclude_none=True)
+
+    # UserUpdate is partial, so validate the prospective complete profile rather
+    # than validating only fields present in this request.
+    try:
+        validate_body_profile_sanity(
+            age=data.get("age", user.age),
+            weight=data.get("weight", user.weight),
+            height=data.get("height", user.height),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     for field, value in data.items():
         setattr(user, field, value)
 

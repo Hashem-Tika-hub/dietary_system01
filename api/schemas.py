@@ -4,8 +4,34 @@
 # ============================================================
 
 from datetime import datetime
+from math import isfinite
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+
+
+# نطاقات تحقق تقنية تمنع الإدخالات الشاذة الواضحة. لا تستخدم للتشخيص الطبي.
+MIN_PROFILE_AGE = 10
+MAX_PROFILE_AGE = 100
+MIN_REASONABLE_BMI = 10.0
+MAX_REASONABLE_BMI = 80.0
+
+
+def validate_body_profile_sanity(*, age: int, weight: float, height: float) -> None:
+    """Reject technically implausible body-profile values before persistence.
+
+    BMI is used here only as a data-quality sanity check after individual field
+    limits have passed; it is not a medical diagnosis or recommendation.
+    """
+    if not MIN_PROFILE_AGE <= age <= MAX_PROFILE_AGE:
+        raise ValueError(
+            f"العمر يجب أن يكون بين {MIN_PROFILE_AGE} و{MAX_PROFILE_AGE} سنة"
+        )
+    if not isfinite(weight) or not isfinite(height):
+        raise ValueError("الوزن والطول يجب أن يكونا قيمتين رقميتين منتهيتين")
+
+    bmi = weight / ((height / 100) ** 2)
+    if not MIN_REASONABLE_BMI <= bmi <= MAX_REASONABLE_BMI:
+        raise ValueError("تركيبة الوزن والطول غير منطقية؛ راجع البيانات المدخلة")
 
 
 # ══════════════════════════════════════════════════════════
@@ -16,13 +42,13 @@ class UserRegister(BaseModel):
     """بيانات تسجيل مستخدم جديد"""
     email:    EmailStr
     password: str = Field(min_length=6)
-    name:     str = Field(default="مستخدم", max_length=100)
+    name:     str = Field(default="مستخدم", min_length=1, max_length=100)
 
     # بيانات الجسم
-    age:            int   = Field(ge=10, le=100)
+    age:            int   = Field(ge=MIN_PROFILE_AGE, le=MAX_PROFILE_AGE)
     gender:         str   = Field(default="male", pattern="^(male|female)$")
-    weight:         float = Field(ge=30, le=300)
-    height:         float = Field(ge=100, le=250)
+    weight:         float = Field(ge=30, le=300, allow_inf_nan=False)
+    height:         float = Field(ge=100, le=250, allow_inf_nan=False)
     activity_level: int   = Field(default=2, ge=1, le=5)
 
     # الهدف والصحة
@@ -41,7 +67,18 @@ class UserRegister(BaseModel):
                                  description="تقليدي = أطباق محلية/عربية، عالمي = أطباق عامة أبسط")
     allow_treats:   bool = Field(default=False, description="السماح بظهور حلويات كخيار مناسبات")
 
-    model_config = {"json_schema_extra": {"example": {
+    @model_validator(mode="after")
+    def validate_profile_sanity(self) -> "UserRegister":
+        validate_body_profile_sanity(
+            age=self.age,
+            weight=self.weight,
+            height=self.height,
+        )
+        return self
+
+    model_config = {
+        "str_strip_whitespace": True,
+        "json_schema_extra": {"example": {
         "email": "omar@example.com", "password": "secret123",
         "name": "عمر", "age": 24, "gender": "male",
         "weight": 78.0, "height": 178.0, "activity_level": 3,
@@ -49,7 +86,8 @@ class UserRegister(BaseModel):
         "has_bp": False, "has_cholesterol": False, "allergies": [],
         "dislikes": ["بحريات"], "favorites": ["دواجن"],
         "cuisine_style": "تقليدي", "allow_treats": False
-    }}}
+    }},
+    }
 
 
 class UserLogin(BaseModel):
@@ -59,11 +97,11 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     """تحديث جزئي للملف الشخصي"""
-    name:           Optional[str]   = None
-    age:            Optional[int]   = Field(default=None, ge=10, le=100)
+    name:           Optional[str]   = Field(default=None, min_length=1, max_length=100)
+    age:            Optional[int]   = Field(default=None, ge=MIN_PROFILE_AGE, le=MAX_PROFILE_AGE)
     gender:         Optional[str]   = Field(default=None, pattern="^(male|female)$")
-    weight:         Optional[float] = Field(default=None, ge=30, le=300)
-    height:         Optional[float] = Field(default=None, ge=100, le=250)
+    weight:         Optional[float] = Field(default=None, ge=30, le=300, allow_inf_nan=False)
+    height:         Optional[float] = Field(default=None, ge=100, le=250, allow_inf_nan=False)
     activity_level: Optional[int]   = Field(default=None, ge=1, le=5)
     goal:           Optional[str]   = Field(default=None, pattern="^(lose|maintain|gain|sport)$")
     has_diabetes:   Optional[bool]  = None
@@ -74,6 +112,8 @@ class UserUpdate(BaseModel):
     favorites:      Optional[List[str]] = None
     cuisine_style:  Optional[str]   = Field(default=None, pattern="^(تقليدي|عالمي|مزيج)$")
     allow_treats:   Optional[bool]  = None
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class UserResponse(BaseModel):

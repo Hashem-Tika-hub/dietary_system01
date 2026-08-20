@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import pytest
 from fastapi import FastAPI
+from pydantic import ValidationError
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -13,6 +14,7 @@ from api.auth import create_token
 from api.database import Base, get_db
 from api.db_models import User
 from api.routes.users import router as users_router
+from api.schemas import UserRegister
 
 
 @pytest.fixture()
@@ -69,6 +71,8 @@ def auth_headers(user: User) -> dict[str, str]:
     [
         ({"age": 0}, "age", 28),
         ({"age": -1}, "age", 28),
+        ({"age": 101}, "age", 28),
+        ({"age": 999}, "age", 28),
         ({"weight": 0}, "weight", 75.0),
         ({"weight": -0.1}, "weight", 75.0),
         ({"height": 0}, "height", 175.0),
@@ -92,6 +96,54 @@ def test_profile_rejects_zero_or_negative_body_measurements(
     assert any(error["loc"][-1] == field for error in response.json()["detail"])
     db.refresh(user)
     assert getattr(user, field) == original_value
+
+
+def test_partial_profile_update_rejects_an_implausible_combined_body_profile(
+    secured_client_and_user,
+) -> None:
+    """A partial update must be checked against the stored height or weight."""
+    client, user, db = secured_client_and_user
+
+    response = client.put(
+        "/users/profile",
+        json={"weight": 30},
+        headers=auth_headers(user),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "تركيبة الوزن والطول غير منطقية؛ راجع البيانات المدخلة"
+    db.refresh(user)
+    assert user.weight == 75.0
+
+
+def test_new_user_model_rejects_an_implausible_combined_body_profile() -> None:
+    """Registration validation rejects an extreme weight/height combination."""
+    with pytest.raises(ValidationError, match="تركيبة الوزن والطول غير منطقية"):
+        UserRegister(
+            email="invalid-profile@example.com",
+            password="secret123",
+            name="مستخدم اختبار",
+            age=25,
+            gender="male",
+            weight=30,
+            height=200,
+        )
+
+
+def test_profile_update_accepts_a_valid_boundary_combination(secured_client_and_user) -> None:
+    """Sanity checks must not reject a complete profile that remains in range."""
+    client, user, _ = secured_client_and_user
+
+    response = client.put(
+        "/users/profile",
+        json={"age": 100, "weight": 30, "height": 170},
+        headers=auth_headers(user),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["age"] == 100
+    assert response.json()["weight"] == 30.0
+    assert response.json()["height"] == 170.0
 
 
 def test_protected_profile_rejects_a_missing_jwt(secured_client_and_user) -> None:

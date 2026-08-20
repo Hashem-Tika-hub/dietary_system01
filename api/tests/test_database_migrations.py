@@ -12,7 +12,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect
+import pytest
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import IntegrityError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ALEMBIC_COMMAND = [sys.executable, "-m", "alembic"]
@@ -65,6 +67,54 @@ def test_downgrade_base_removes_application_tables(tmp_path: Path) -> None:
     run_alembic("downgrade", "base", database_url=database_url)
 
     assert not ({"users", "meal_logs", "weekly_plans"} & table_names(database_url))
+
+
+def test_user_profile_sanity_constraints_reject_invalid_direct_database_writes(
+    tmp_path: Path,
+) -> None:
+    """Database constraints protect user profiles even when API validation is bypassed."""
+    database_url = f"sqlite:///{tmp_path / 'profile-constraints.db'}"
+    run_alembic("upgrade", "head", database_url=database_url)
+
+    engine = create_engine(database_url)
+    try:
+        checks = {check["name"] for check in inspect(engine).get_check_constraints("users")}
+        assert {
+            "ck_users_age_range",
+            "ck_users_weight_range",
+            "ck_users_height_range",
+            "ck_users_activity_level_range",
+            "ck_users_body_profile_bmi_sanity",
+        } <= checks
+
+        with engine.begin() as connection:
+            with pytest.raises(IntegrityError):
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO users (
+                            email, hashed_password, name, age, gender,
+                            weight, height, activity_level, goal
+                        ) VALUES (
+                            :email, :hashed_password, :name, :age, :gender,
+                            :weight, :height, :activity_level, :goal
+                        )
+                        """
+                    ),
+                    {
+                        "email": "invalid-direct-write@example.com",
+                        "hashed_password": "not-a-real-password",
+                        "name": "اختبار قاعدة البيانات",
+                        "age": 28,
+                        "gender": "male",
+                        "weight": 30.0,
+                        "height": 200.0,
+                        "activity_level": 3,
+                        "goal": "maintain",
+                    },
+                )
+    finally:
+        engine.dispose()
 
 
 def test_schema_check_rejects_database_without_migrations(tmp_path: Path) -> None:

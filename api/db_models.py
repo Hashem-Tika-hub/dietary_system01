@@ -32,6 +32,19 @@ class User(Base):
     """جدول المستخدمين."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("age BETWEEN 10 AND 100", name="ck_users_age_range"),
+        CheckConstraint("weight BETWEEN 30.0 AND 300.0", name="ck_users_weight_range"),
+        CheckConstraint("height BETWEEN 100.0 AND 250.0", name="ck_users_height_range"),
+        CheckConstraint(
+            "activity_level BETWEEN 1 AND 5",
+            name="ck_users_activity_level_range",
+        ),
+        CheckConstraint(
+            "weight * 10000.0 / (height * height) BETWEEN 10.0 AND 80.0",
+            name="ck_users_body_profile_bmi_sanity",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
