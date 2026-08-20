@@ -66,3 +66,39 @@ def test_hard_filter_applies_meal_eligibility_before_candidates_are_ranked() -> 
     eligible = meal_rules.apply_hard_filters(candidates, StubUser(), meal="lunch")
 
     assert eligible["fdc_id"].tolist() == ["lunch-ok"]
+
+
+def test_multiple_allergies_filter_known_conflicts_when_catalog_data_is_incomplete() -> None:
+    """Known milk/nut conflicts are excluded while incomplete safe rows do not crash.
+
+    The catalog deliberately contains a canonical allergy code, a comma-delimited
+    code, a legacy category-only row, and a row without allergy metadata.
+    """
+    candidates = pd.DataFrame(
+        {
+            "fdc_id": [
+                "milk-with-code",
+                "peanut-with-code",
+                "legacy-nut-category",
+                "safe-row-with-missing-allergen-data",
+            ],
+            "meal_type": ["غداء", "غداء", "غداء", "غداء"],
+            "category": ["أطباق متنوعة", "أطباق متنوعة", "مكسرات", "فواكه"],
+            "allergen_codes": [
+                ["allergen.milk"],
+                "allergen.peanut, allergen.soy",
+                None,
+                None,
+            ],
+        }
+    )
+
+    eligible = meal_rules.apply_hard_filters(
+        candidates,
+        StubUser(allergies=["حليب", "مكسرات"]),
+        meal="lunch",
+    )
+
+    assert eligible["fdc_id"].tolist() == ["safe-row-with-missing-allergen-data"]
+    assert len(eligible) == 1
+    assert candidates["allergen_codes"].isna().sum() == 2
