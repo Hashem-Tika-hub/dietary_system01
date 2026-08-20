@@ -96,6 +96,10 @@ def test_meal_recommendation_exposes_active_ranking_policy(
                 "fat": 8.0,
                 "portion_g": 150.0,
                 "hybrid_score": 0.91,
+                "food_cluster": 2,
+                "recommendation_reason": "يتوافق مع هدف المحافظة.",
+                "recommendation_reasons": ["يتوافق مع هدف المحافظة."],
+                "diversity_applied": True,
             }
         ]
 
@@ -123,4 +127,8 @@ def test_meal_recommendation_exposes_active_ranking_policy(
     assert captured["user_data"]["collaborative_signals_ready"] is False
     assert response.json()["ranking_basis"] == "content_based"
     assert response.json()["content_weight"] == 1.0
-    assert response.json()["recommendations"][0]["fdc_id"] == "TEST-FOOD-1"
+    recommendation = response.json()["recommendations"][0]
+    assert recommendation["fdc_id"] == "TEST-FOOD-1"
+    assert recommendation["food_cluster"] == 2
+    assert recommendation["recommendation_reason"] == "يتوافق مع هدف المحافظة."
+    assert recommendation["diversity_applied"] is True

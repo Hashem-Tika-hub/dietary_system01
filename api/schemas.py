@@ -156,6 +156,10 @@ class FoodRecommendation(BaseModel):
     fat:            float
     portion_g:      float = 100
     hybrid_score:   float = 0.0
+    food_cluster:   Optional[int] = None
+    recommendation_reason: str = ""
+    recommendation_reasons: List[str] = []
+    diversity_applied: bool = False
 
 
 class MealRecommendationResponse(BaseModel):

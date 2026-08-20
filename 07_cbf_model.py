@@ -167,8 +167,9 @@ class ContentBasedFilter:
 
         cols = ["fdc_id", "name", "category", "food_group", "meal_type",
                 "calories", "protein", "carbs", "fat", "fiber",
-                "portion_g", "portion_calories",
-                "health_score", "cbf_score"]
+                "portion_g", "portion_calories", "health_score",
+                "diabetic_friendly", "low_sodium", "is_high_protein",
+                "cbf_score"]
         return result[[c for c in cols if c in result.columns]]
 
     def save(self, path=None):

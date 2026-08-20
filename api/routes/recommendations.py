@@ -125,6 +125,10 @@ def recommend_meal(
             fat          = float(r.get("fat", 0)),
             portion_g    = float(r.get("portion_g", 100)),
             hybrid_score = float(r.get("hybrid_score", 0)),
+            food_cluster = r.get("food_cluster"),
+            recommendation_reason = str(r.get("recommendation_reason", "")),
+            recommendation_reasons = list(r.get("recommendation_reasons", [])),
+            diversity_applied = bool(r.get("diversity_applied", False)),
         ) for r in items]
 
         return MealRecommendationResponse(
