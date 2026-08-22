@@ -1,0 +1,193 @@
+{
+  "foods": {
+    "present": true,
+    "rows": 456,
+    "columns": [
+      "fdc_id",
+      "name",
+      "category",
+      "food_group",
+      "meal_type",
+      "source",
+      "calories",
+      "protein",
+      "carbs",
+      "fat",
+      "fiber",
+      "sugar",
+      "sodium",
+      "calcium",
+      "iron",
+      "protein_pct",
+      "carbs_pct",
+      "fat_pct",
+      "protein_density",
+      "calorie_level",
+      "health_score",
+      "is_high_protein",
+      "diabetic_friendly",
+      "low_sodium"
+    ],
+    "missing_by_column": {},
+    "duplicate_rows": 0,
+    "unique_food_ids": 456,
+    "category_distribution": {
+      "خضروات": 68,
+      "فواكه": 42,
+      "مشروبات": 42,
+      "حلويات": 34,
+      "أسماك": 24,
+      "مكسرات": 21,
+      "حبوب": 20,
+      "ألبان": 18,
+      "سلطات": 15,
+      "بقوليات": 13,
+      "دواجن": 13,
+      "مخبوزات": 12,
+      "مقبلات": 11,
+      "مكونات": 11,
+      "شوربات": 11,
+      "لحوم": 10,
+      "معجنات": 9,
+      "مكرونة": 9,
+      "سناكس": 8,
+      "بيض": 7,
+      "أطباق تقليدية": 7,
+      "سكريات": 7,
+      "يخنات": 7,
+      "زيوت": 6,
+      "أطباق أرز": 4,
+      "صلصات": 4,
+      "أطباق حبوب": 3,
+      "فطور": 3,
+      "نباتي": 3,
+      "أطباق لحوم": 3,
+      "بذور": 2,
+      "دهون": 2,
+      "لحوم سريعة": 2,
+      "أطباق بيض": 1,
+      "حلويات/فطور": 1,
+      "أطباق سمك": 1,
+      "خضار": 1,
+      "أطباق خضار": 1
+    },
+    "nutrient_columns": [
+      "calories",
+      "protein",
+      "carbs",
+      "fat",
+      "fiber",
+      "sugar",
+      "sodium"
+    ]
+  },
+  "synthetic_users": {
+    "present": true,
+    "rows": 300,
+    "columns": [
+      "name",
+      "age",
+      "gender",
+      "weight",
+      "height",
+      "activity_level",
+      "goal",
+      "has_diabetes",
+      "has_bp",
+      "has_cholesterol",
+      "allergies",
+      "dislikes",
+      "favorites",
+      "cuisine_style",
+      "allow_treats",
+      "bmi",
+      "bmr",
+      "tdee",
+      "daily_calories",
+      "protein_g",
+      "carbs_g",
+      "fat_g"
+    ],
+    "missing_by_column": {},
+    "duplicate_rows": 0,
+    "named_as_synthetic": true,
+    "feature_columns_available": [
+      "age",
+      "gender",
+      "weight",
+      "height",
+      "activity_level",
+      "goal",
+      "has_diabetes",
+      "has_bp",
+      "has_cholesterol",
+      "allergies",
+      "dislikes",
+      "favorites"
+    ],
+    "derived_target_like_columns": [
+      "bmi",
+      "bmr",
+      "tdee",
+      "daily_calories",
+      "protein_g",
+      "carbs_g",
+      "fat_g"
+    ],
+    "unique_users": 300,
+    "goal_distribution": {
+      "lose": 102,
+      "maintain": 96,
+      "gain": 52,
+      "sport": 50
+    },
+    "health_flag_counts": {
+      "has_diabetes": 49,
+      "has_bp": 50,
+      "has_cholesterol": 31
+    }
+  },
+  "evaluation_results": {
+    "present": true,
+    "rows": 20,
+    "columns": [
+      "user",
+      "goal",
+      "has_diabetes",
+      "K",
+      "Precision@K",
+      "Recall@K",
+      "F1-Score",
+      "NDCG@K",
+      "Calorie_Acc",
+      "Health_Compliance"
+    ],
+    "missing_by_column": {},
+    "duplicate_rows": 0
+  },
+  "sqlite": {
+    "present": true,
+    "tables": [
+      "meal_logs",
+      "users",
+      "weekly_plans"
+    ],
+    "row_counts": {
+      "meal_logs": 0,
+      "users": 1,
+      "weekly_plans": 3
+    }
+  },
+  "supervised_learning_readiness": {
+    "has_feature_rows": true,
+    "has_explicit_expert_label": false,
+    "has_outcome_label": false,
+    "target_like_values_are_formula_derived": true,
+    "assessment": "not_ready_for_valid_supervised_personal-nutrition training"
+  },
+  "collaborative_filtering_readiness": {
+    "stored_explicit_feedback_rows": 0,
+    "has_real_user_item_interactions": false,
+    "assessment": "cold_start_without_collected_explicit_feedback"
+  }
+}
