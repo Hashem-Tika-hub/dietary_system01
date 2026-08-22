@@ -2,7 +2,13 @@
 #  api/db_models.py — جداول قاعدة البيانات
 # ============================================================
 
-from datetime import datetime
+from datetime import UTC, datetime
+
+
+def utcnow() -> datetime:
+    """Return a UTC timestamp compatible with current naive SQLite columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 from sqlalchemy import (
     Boolean,
@@ -26,12 +32,25 @@ class User(Base):
     """جدول المستخدمين."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("age BETWEEN 10 AND 100", name="ck_users_age_range"),
+        CheckConstraint("weight BETWEEN 30.0 AND 300.0", name="ck_users_weight_range"),
+        CheckConstraint("height BETWEEN 100.0 AND 250.0", name="ck_users_height_range"),
+        CheckConstraint(
+            "activity_level BETWEEN 1 AND 5",
+            name="ck_users_activity_level_range",
+        ),
+        CheckConstraint(
+            "weight * 10000.0 / (height * height) BETWEEN 10.0 AND 80.0",
+            name="ck_users_body_profile_bmi_sanity",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(100), default="مستخدم")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     # بيانات الجسم
     age = Column(Integer, nullable=False)
@@ -57,6 +76,9 @@ class User(Base):
     weekly_plans = relationship(
         "WeeklyPlan", back_populates="user", cascade="all, delete"
     )
+    food_feedback = relationship(
+        "UserFoodFeedback", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class MealLog(Base):
@@ -66,7 +88,7 @@ class MealLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=utcnow)
     meal_type = Column(String(20))
     food_name = Column(String(255))
     fdc_id = Column(String(50))
@@ -80,6 +102,45 @@ class MealLog(Base):
     user = relationship("User", back_populates="meal_logs")
 
 
+class UserFoodFeedback(Base):
+    """تفاعل صريح ومصرّح به بين المستخدم وصنف من كتالوج الطعام.
+
+    يحتفظ النظام بسجل حالي واحد لكل زوج (مستخدم، طعام). ويُستخدم هذا الجدول
+    فقط لتدريب التصفية التعاونية الحقيقية؛ سجلات تناول الوجبات لا تُحوَّل
+    تلقائيًا إلى تفضيلات.
+    """
+
+    __tablename__ = "user_food_feedback"
+    __table_args__ = (
+        UniqueConstraint("user_id", "food_id", name="uq_user_food_feedback"),
+        CheckConstraint(
+            "event_type IN ('like', 'dislike', 'save', 'not_interested')",
+            name="ck_user_food_feedback_event_type_allowed",
+        ),
+        CheckConstraint(
+            "score IN (-1.0, 0.5, 1.0)",
+            name="ck_user_food_feedback_score_allowed",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    food_id = Column(
+        Integer, ForeignKey("foods.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    event_type = Column(String(30), nullable=False)
+    score = Column(Float, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(
+        DateTime, nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    user = relationship("User", back_populates="food_feedback")
+    food = relationship("Food", back_populates="feedback_records")
+
+
 class WeeklyPlan(Base):
     """الخطط الأسبوعية المُولَّدة."""
 
@@ -87,7 +148,7 @@ class WeeklyPlan(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     plan_data = Column(JSON, nullable=False)
 
     user = relationship("User", back_populates="weekly_plans")
@@ -107,7 +168,7 @@ class CatalogSource(Base):
     version = Column(String(100), nullable=False)
     license_url = Column(String(500))
     checksum = Column(String(128))
-    imported_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    imported_at = Column(DateTime, nullable=False, default=utcnow)
 
     foods = relationship("Food", back_populates="source")
     ingredient_allergen_records = relationship(
@@ -145,9 +206,9 @@ class Food(Base):
     basis_grams = Column(Float, nullable=False, default=100.0)
     data_quality = Column(String(20), nullable=False, default="verified")
     is_active = Column(Boolean, nullable=False, default=True, index=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, nullable=False, default=utcnow, onupdate=utcnow
     )
 
     source = relationship("CatalogSource", back_populates="foods")
@@ -162,6 +223,9 @@ class Food(Base):
     )
     allergen_records = relationship(
         "FoodAllergen", back_populates="food", cascade="all, delete-orphan"
+    )
+    feedback_records = relationship(
+        "UserFoodFeedback", back_populates="food", cascade="all, delete-orphan"
     )
 
 

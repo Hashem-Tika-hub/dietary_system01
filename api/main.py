@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     """
     Runs once at startup:
       1. Verifies that Alembic prepared the database schema
-      2. Loads ML models into memory (stays loaded for all requests)
+      2. Loads the content model and prepares explicit-feedback ranking
     """
     print("=" * 52)
     print("  Dietary Recommendation API — Starting up")
@@ -40,11 +40,11 @@ async def lifespan(app: FastAPI):
     assert_database_schema_is_current()
     print("  ✓ Database schema is managed by Alembic")
 
-    print("  [2/2] Loading ML models...")
+    print("  [2/2] Loading recommendation models...")
     try:
-        rec_engine.get_engine()          # warm up — loads CBF + CF
+        rec_engine.get_engine()          # warm up — loads content model
         print("  ✓ CBF model loaded")
-        print("  ✓ CF  model loaded")
+        print("  ✓ Explicit-feedback CF activates after readiness checks")
     except Exception as e:
         print(f"  ⚠  ML models not found: {e}")
         print("     Run: python run_phase2.py  to train them first")
@@ -59,31 +59,60 @@ async def lifespan(app: FastAPI):
     print("\n  Shutting down...")
 
 
-# ── Application ───────────────────────────────────────────
+# ── Application / OpenAPI ─────────────────────────────────
+OPENAPI_TAGS = [
+    {
+        "name": "Health",
+        "description": "فحص جاهزية الخدمة وقاعدة البيانات والنماذج.",
+    },
+    {
+        "name": "المصادقة",
+        "description": "إنشاء حساب وتسجيل الدخول والحصول على JWT.",
+    },
+    {
+        "name": "المستخدم",
+        "description": "إدارة الملف الشخصي والأهداف الغذائية وسجل الوجبات.",
+    },
+    {
+        "name": "Recommendations",
+        "description": "اقتراح الوجبات والخطط الأسبوعية والبدائل. القيود الصلبة تطبق قبل الترتيب.",
+    },
+    {
+        "name": "Foods",
+        "description": "البحث عن الأطعمة وعرض بياناتها الغذائية.",
+    },
+]
+
 app = FastAPI(
-    title       = "Dietary Recommendation API",
-    description = """
-## Smart Personalized Dietary Plan System
+    title="Dietary Recommendation API",
+    description="""
+## نظام توصية وجبات وخطط غذائية شخصية
 
-An intelligent API that suggests personalized meal plans using Machine Learning.
+تساعد هذه الواجهة تطبيقات الويب والموبايل على إدارة ملفات المستخدمين،
+سجل الوجبات، وخطط الوجبات المقترحة.
 
-### Features
-- **JWT Authentication** — Secure register / login
-- **Hybrid Recommendations** — CBF (60%) + CF (40%)
-- **Health Filters** — Diabetes, hypertension, allergies
-- **Weekly Meal Plans** — 7-day full plan generation
-- **Food Database** — Search 800+ foods with nutritional data
+> **حدود السلامة:** القيود الصلبة، مثل الحساسية وملاءمة الوجبة، تطبق قبل
+> ترتيب المرشحات. يعتمد الترتيب حاليًا على المحتوى افتراضيًا؛ لا يُفعل
+> الترتيب التعاوني إلا بعد توافر تفاعلات صريحة وحقيقية من المستخدمين.
 
-### Flow
-1. `POST /auth/register` — Create account
-2. `POST /auth/login` — Get JWT token
-3. `GET /users/nutrition-targets` — See your daily calorie targets
-4. `POST /recommendations/meal` — Get meal recommendations
-5. `POST /recommendations/weekly` — Generate a 7-day plan
+### بدء سريع
+1. استخدم `POST /auth/register` لإنشاء حساب، ثم `POST /auth/login` للحصول على JWT.
+2. اضغط **Authorize** داخل Swagger وأدخل `Bearer <access_token>`.
+3. حدّث الملف عبر `PUT /users/profile` وأضف تفضيلات وقيود الطعام.
+4. استخدم `POST /recommendations/meal` أو `POST /recommendations/weekly`.
+
+### التوثيق
+- Swagger UI: `/docs`
+- ReDoc: `/redoc`
+- مخطط OpenAPI: `/openapi.json`
     """,
-    version     = "1.0.0",
-    lifespan    = lifespan,
+    version="1.1.0",
+    openapi_tags=OPENAPI_TAGS,
+    contact={"name": "Dietary System Project"},
+    license_info={"name": "Academic project"},
+    lifespan=lifespan,
 )
+
 
 # ── Rate limiting — حماية /auth/login و/auth/register من brute force ──
 app.state.limiter = limiter
@@ -125,7 +154,7 @@ def root():
     return {
         "status":  "running",
         "name":    "Dietary Recommendation API",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "docs":    "/docs",
     }
 

@@ -2,8 +2,8 @@
 #  09_hybrid_recommender.py — النظام الهجين الكامل
 #  الأمر: python 09_hybrid_recommender.py
 #
-#  هذا هو قلب المشروع — يجمع كل النماذج معاً:
-#  CBF (60%) + CF (40%) → فلترة صحية → خطة أسبوعية
+#  قلب التوصية: CBF افتراضيًا، ثم CF قائم على تفاعل صريح حقيقي عند الجاهزية
+#  القيود الصحية الصلبة → ترتيب آمن → خطة أسبوعية
 # ============================================================
 
 import pickle
@@ -15,7 +15,10 @@ from pathlib import Path
 from config import DATA_DIR, MODEL_DIR
 from api.services.recommendation_policy import (
     blend_candidate_scores,
+    build_food_cluster_map,
+    build_recommendation_reasons,
     effective_hybrid_weights,
+    select_diverse_candidate,
 )
 
 import importlib.util
@@ -67,33 +70,29 @@ class HybridRecommender:
         self.cf_weight  = cf_weight
         self.cbf = None
         self.cf  = None
+        self.food_cluster_by_id: dict[str, int] = {}
         self.is_ready = False
 
     def load_models(self):
-        """تحميل نماذج CBF و CF المحفوظة"""
+        """تحميل نموذج المحتوى وتجهيز الترتيب التعاوني الصريح عند الجاهزية."""
         cbf_path = MODEL_DIR / "cbf_model.pkl"
-        cf_path  = MODEL_DIR / "cf_model.pkl"
-
         if not cbf_path.exists():
             raise FileNotFoundError(
                 "cbf_model.pkl غير موجود! شغّل: python 07_cbf_model.py"
             )
-        if not cf_path.exists():
-            raise FileNotFoundError(
-                "cf_model.pkl غير موجود! شغّل: python 08_cf_model.py"
-            )
 
-        # تحميل CBF
+        # تحميل نموذج المحتوى، وهو بديل cold-start الآمن. لا يُحمَّل نموذج
+        # CF القديم لأنه مُدرَّب على تقييمات مصطنعة؛ درجات CF الصحيحة تأتي
+        # لاحقًا من تفاعلات صريحة حقيقية عبر ExplicitFeedbackCollaborativeFilter.
         cbf_mod = _import("07_cbf_model.py", "cbf_mod")
         self.cbf = cbf_mod.ContentBasedFilter.load(cbf_path)
-
-        # تحميل CF
-        cf_mod  = _import("08_cf_model.py", "cf_mod")
-        self.cf = cf_mod.CollaborativeFilter.load(cf_path)
+        self.cf = None
+        self.food_cluster_by_id = build_food_cluster_map(self.cbf.foods_df)
 
         self.is_ready = True
         print("  ✓ نموذج CBF loaded")
-        print("  ✓ نموذج CF  loaded")
+        print(f"  ✓ K-Means food diversity ready: {len(self.food_cluster_by_id)} foods")
+        print("  ✓ Explicit-feedback CF will activate when data is ready")
 
     def _score_candidates(self, user, meal: str,
                            exclude_ids: list = None) -> pd.DataFrame:
@@ -106,27 +105,37 @@ class HybridRecommender:
         cbf_recs = self.cbf.recommend(
             user, meal=meal, top_k=pool, exclude_ids=exclude_ids
         ).rename(columns={"cbf_score": "raw_cbf"})
-        cf_recs = self.cf.recommend(
-            user, meal=meal, top_k=pool, exclude_ids=exclude_ids
-        ).rename(columns={"cf_score": "raw_cf"})
-
         if cbf_recs.empty:
             return cbf_recs.assign(hybrid_score=pd.Series(dtype=float))
+        cbf_recs["fdc_id"] = cbf_recs["fdc_id"].astype(str)
 
-        cf_small = cf_recs[["fdc_id", "raw_cf"]].copy()
+        # Never reuse the legacy CF model trained on synthetic ratings. When
+        # the explicit-feedback model is ready, API code supplies its scores
+        # keyed by external food identifiers; otherwise this frame is empty
+        # and policy weights force content-based ranking.
+        explicit_scores = getattr(user, "explicit_collaborative_scores", {})
+        cf_small = pd.DataFrame(
+            [
+                {"fdc_id": str(food_id), "raw_cf": float(score)}
+                for food_id, score in explicit_scores.items()
+            ],
+            columns=["fdc_id", "raw_cf"],
+        )
+        for optional_column in ("diabetic_friendly", "low_sodium", "is_high_protein"):
+            if optional_column not in cbf_recs.columns:
+                cbf_recs[optional_column] = False
         merged = pd.merge(
             cbf_recs[["fdc_id", "name", "category", "food_group",
                       "calories", "protein", "carbs", "fat", "fiber",
-                      "health_score", "raw_cbf"]],
+                      "health_score", "diabetic_friendly", "low_sodium",
+                      "is_high_protein", "raw_cbf"]],
             cf_small,
             on="fdc_id", how="left"
         )
 
-        # The bundled CF model is trained from synthetic ratings. Until the
-        # application records real, consented feedback, ranking stays fully
-        # content-based instead of presenting synthetic correlations as user
-        # preference. The policy becomes hybrid only when a future feedback
-        # pipeline marks the evidence as ready.
+        # Explicit feedback is the only valid source of collaborative scores.
+        # Hard eligibility filters have already run inside the content model,
+        # so no collaborative score can introduce an unsafe candidate.
         weights = effective_hybrid_weights(
             configured_content_weight=self.cbf_weight,
             configured_collaborative_weight=self.cf_weight,
@@ -140,7 +149,8 @@ class HybridRecommender:
     def recommend_meal(self,
                        user,
                        meal: str,
-                       exclude_ids: list = None) -> list:
+                       exclude_ids: list = None,
+                       recent_clusters_by_group: dict | None = None) -> list:
         """
         يبني "طبق" الوجبة حسب قالب Exchange Lists / USDA MyPlate بدل قائمة
         مسطحة: كل خانة (بروتين/نشويات/خضار...) تاخذ حصتها من هدف سعرات
@@ -160,6 +170,9 @@ class HybridRecommender:
 
         exclude_ids = list(exclude_ids or [])
         candidates = self._score_candidates(user, meal, exclude_ids=exclude_ids)
+        candidates = candidates.copy()
+        candidates["food_cluster"] = candidates["fdc_id"].map(self.food_cluster_by_id)
+        recent_clusters_by_group = recent_clusters_by_group if recent_clusters_by_group is not None else {}
 
         plate = []
         if candidates.empty:
@@ -182,11 +195,29 @@ class HybridRecommender:
                     "category": None, "food_group": slot["food_group"][0],
                     "slot": slot["slot"], "portion_g": 0.0, "calories": 0.0,
                     "protein": 0.0, "carbs": 0.0, "fat": 0.0,
-                    "hybrid_score": 0.0, "missing": True,
+                    "hybrid_score": 0.0, "food_cluster": None,
+                    "recommendation_reasons": ["لا يوجد صنف مؤهل ضمن القيود الحالية."],
+                    "recommendation_reason": "لا يوجد صنف مؤهل ضمن القيود الحالية.",
+                    "diversity_applied": False, "missing": True,
                 })
                 continue
 
-            best = eligible.sort_values("hybrid_score", ascending=False).iloc[0]
+            recent_clusters = [
+                cluster
+                for food_group in slot["food_group"]
+                for cluster in recent_clusters_by_group.get(food_group, [])
+            ]
+            selection = select_diverse_candidate(
+                eligible,
+                recently_used_clusters=recent_clusters,
+            )
+            best = selection.candidate
+            reasons = build_recommendation_reasons(
+                user=user,
+                meal=meal,
+                candidate=best,
+                diversity_applied=selection.diversity_applied,
+            )
             portion_g, portion_cal = meal_rules.compute_portion(
                 best["calories"], slot_target_cal, best["food_group"]
             )
@@ -202,7 +233,15 @@ class HybridRecommender:
                 "carbs":        round(float(best["carbs"])   * portion_g / 100, 1),
                 "fat":          round(float(best["fat"])     * portion_g / 100, 1),
                 "hybrid_score": round(float(best["hybrid_score"]), 3),
+                "food_cluster": int(best["food_cluster"]) if pd.notna(best["food_cluster"]) else None,
+                "recommendation_reasons": reasons,
+                "recommendation_reason": " ".join(reasons),
+                "diversity_applied": selection.diversity_applied,
             })
+            if pd.notna(best["food_cluster"]):
+                history = recent_clusters_by_group.setdefault(best["food_group"], [])
+                history.append(int(best["food_cluster"]))
+                del history[:-2]
 
         return plate
 
@@ -224,6 +263,7 @@ class HybridRecommender:
         """
         plan = {}
         used_ids = []   # نافذة تنويع متجدّدة عبر الأسبوع (لا تكرار الصنف نفسه قريبًا)
+        recent_clusters_by_group = {}  # تنويع غذائي ناعم بحسب مجموعة الطعام
 
         for day_idx in range(days):
             day_name = DAYS_AR[day_idx % 7]
@@ -232,7 +272,8 @@ class HybridRecommender:
             for meal in MEALS:
                 plate = self.recommend_meal(
                     user, meal=meal,
-                    exclude_ids=used_ids[-25:] if used_ids else None
+                    exclude_ids=used_ids[-25:] if used_ids else None,
+                    recent_clusters_by_group=recent_clusters_by_group,
                 )
                 for item in plate:
                     if item.get("fdc_id") is not None:   # تجاوز خانات "missing"

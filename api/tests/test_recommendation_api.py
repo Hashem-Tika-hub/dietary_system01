@@ -96,6 +96,10 @@ def test_meal_recommendation_exposes_active_ranking_policy(
                 "fat": 8.0,
                 "portion_g": 150.0,
                 "hybrid_score": 0.91,
+                "food_cluster": 2,
+                "recommendation_reason": "يتوافق مع هدف المحافظة.",
+                "recommendation_reasons": ["يتوافق مع هدف المحافظة."],
+                "diversity_applied": True,
             }
         ]
 
@@ -118,8 +122,13 @@ def test_meal_recommendation_exposes_active_ranking_policy(
     response = client.post("/recommendations/meal", json={"meal": "lunch", "top_k": 3})
 
     assert response.status_code == 200
-    assert captured["user_data"]["interaction_count"] == 1
+    # A meal log is consumption history, not explicit preference evidence.
+    assert captured["user_data"]["interaction_count"] == 0
     assert captured["user_data"]["collaborative_signals_ready"] is False
     assert response.json()["ranking_basis"] == "content_based"
     assert response.json()["content_weight"] == 1.0
-    assert response.json()["recommendations"][0]["fdc_id"] == "TEST-FOOD-1"
+    recommendation = response.json()["recommendations"][0]
+    assert recommendation["fdc_id"] == "TEST-FOOD-1"
+    assert recommendation["food_cluster"] == 2
+    assert recommendation["recommendation_reason"] == "يتوافق مع هدف المحافظة."
+    assert recommendation["diversity_applied"] is True

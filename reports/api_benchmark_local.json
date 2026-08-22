@@ -1,0 +1,87 @@
+{
+  "measurement_scope": {
+    "environment": "FastAPI TestClient with local SQLite",
+    "runs_per_endpoint": 50,
+    "warmup_runs": 5,
+    "excluded": [
+      "network and TLS latency",
+      "external database latency",
+      "authentication token verification",
+      "serialized ML model inference"
+    ]
+  },
+  "endpoints": {
+    "GET /users/profile": {
+      "runs": 50,
+      "status_codes": [
+        200
+      ],
+      "min_ms": 1.287,
+      "mean_ms": 1.773,
+      "median_ms": 1.752,
+      "p95_ms": 2.254,
+      "p99_ms": 2.382,
+      "max_ms": 2.382
+    },
+    "GET /users/meal-logs": {
+      "runs": 50,
+      "status_codes": [
+        200
+      ],
+      "min_ms": 2.456,
+      "mean_ms": 3.134,
+      "median_ms": 3.02,
+      "p95_ms": 4.251,
+      "p99_ms": 4.895,
+      "max_ms": 4.895
+    },
+    "GET /users/meal-logs/summary": {
+      "runs": 50,
+      "status_codes": [
+        200
+      ],
+      "min_ms": 2.631,
+      "mean_ms": 3.739,
+      "median_ms": 3.517,
+      "p95_ms": 5.671,
+      "p99_ms": 6.53,
+      "max_ms": 6.53
+    },
+    "POST /users/meal-logs": {
+      "runs": 50,
+      "status_codes": [
+        201
+      ],
+      "min_ms": 4.693,
+      "mean_ms": 6.431,
+      "median_ms": 6.287,
+      "p95_ms": 8.469,
+      "p99_ms": 9.769,
+      "max_ms": 9.769
+    },
+    "POST /users/food-feedback": {
+      "runs": 50,
+      "status_codes": [
+        201
+      ],
+      "min_ms": 4.1,
+      "mean_ms": 5.398,
+      "median_ms": 5.316,
+      "p95_ms": 6.866,
+      "p99_ms": 7.979,
+      "max_ms": 7.979
+    },
+    "GET /users/food-feedback/readiness": {
+      "runs": 50,
+      "status_codes": [
+        200
+      ],
+      "min_ms": 2.327,
+      "mean_ms": 3.063,
+      "median_ms": 2.869,
+      "p95_ms": 3.91,
+      "p99_ms": 7.779,
+      "max_ms": 7.779
+    }
+  }
+}

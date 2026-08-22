@@ -5,6 +5,8 @@
 
 import importlib.util
 import pickle
+
+import pandas as pd
 from pathlib import Path
 from functools import lru_cache
 
@@ -72,6 +74,11 @@ def build_user(data: dict) -> UserProfile:
     user.collaborative_signals_ready = bool(
         data.get("collaborative_signals_ready", False)
     )
+    # Scores are keyed by the candidate's external food identifier and are
+    # sourced only from explicit user feedback after readiness has passed.
+    user.explicit_collaborative_scores = dict(
+        data.get("explicit_collaborative_scores", {})
+    )
     return user
 
 
@@ -130,7 +137,8 @@ def get_swap_alternatives(user_data: dict, meal: str, slot: str,
     if candidates.empty:
         return []
 
-    eligible = candidates[candidates["food_group"].isin(slot_info["food_group"])]
+    eligible = candidates[candidates["food_group"].isin(slot_info["food_group"])].copy()
+    eligible["food_cluster"] = eligible["fdc_id"].astype(str).map(engine.food_cluster_by_id)
     top = eligible.sort_values("hybrid_score", ascending=False).head(top_k)
 
     meal_targets = user.get_meal_targets()
@@ -140,6 +148,12 @@ def get_swap_alternatives(user_data: dict, meal: str, slot: str,
     for _, row in top.iterrows():
         portion_g, portion_cal = _mr.compute_portion(
             float(row["calories"]), slot_target_cal, row["food_group"]
+        )
+        reasons = _hr.build_recommendation_reasons(
+            user=user,
+            meal=meal,
+            candidate=row,
+            diversity_applied=False,
         )
         results.append({
             "fdc_id":       row["fdc_id"],
@@ -153,6 +167,10 @@ def get_swap_alternatives(user_data: dict, meal: str, slot: str,
             "carbs":        round(float(row["carbs"])   * portion_g / 100, 1),
             "fat":          round(float(row["fat"])     * portion_g / 100, 1),
             "hybrid_score": round(float(row["hybrid_score"]), 3),
+            "food_cluster": int(row["food_cluster"]) if pd.notna(row["food_cluster"]) else None,
+            "recommendation_reasons": reasons,
+            "recommendation_reason": " ".join(reasons),
+            "diversity_applied": False,
         })
     return results
 
@@ -192,6 +210,10 @@ def swap_meal_item(plan_data: dict, day: str, meal: str, slot: str,
         "carbs":        round(float(food["carbs"])   * portion_g / 100, 1),
         "fat":          round(float(food["fat"])     * portion_g / 100, 1),
         "hybrid_score": 1.0,   # اختيار المستخدم يدويًا
+        "food_cluster": engine.food_cluster_by_id.get(str(new_fdc_id)),
+        "recommendation_reasons": ["اختيار يدوي من المستخدم ضمن البدائل المؤهلة."],
+        "recommendation_reason": "اختيار يدوي من المستخدم ضمن البدائل المؤهلة.",
+        "diversity_applied": False,
     }
 
     day_plan  = dict(plan_data.get(day, {}))
