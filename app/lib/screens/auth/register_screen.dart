@@ -31,13 +31,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool    _diabetes    = false;
   bool    _bp          = false;
   bool    _cholesterol = false;
+  final Set<String> _allergies = {};
   final Set<String> _dislikes  = {};
   final Set<String> _favorites = {};
   String  _cuisineStyle = 'مزيج';
+  bool    _allowTreats = false;
+  String? _stepError;
+
+  String? _validateCurrentStep() {
+    if (_step != 0) return null;
+    if (_name.text.trim().isEmpty) return 'أدخل الاسم قبل المتابعة';
+    if (!_email.text.trim().contains('@')) return 'أدخل بريدًا إلكترونيًا صالحًا';
+    if (_pass.text.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    return null;
+  }
 
   void _next() {
+    final validationError = _validateCurrentStep();
+    if (validationError != null) {
+      setState(() => _stepError = validationError);
+      return;
+    }
+
     if (_step < 3) {
-      setState(() => _step++);
+      setState(() {
+        _step++;
+        _stepError = null;
+      });
       _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -73,10 +93,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'has_diabetes':    _diabetes,
       'has_bp':          _bp,
       'has_cholesterol': _cholesterol,
-      'allergies':       [],
+      'allergies':       _allergies.toList(),
       'dislikes':        _dislikes.toList(),
       'favorites':       _favorites.toList(),
       'cuisine_style':   _cuisineStyle,
+      'allow_treats':    _allowTreats,
     });
     if (ok && mounted) context.go('/home');
   }
@@ -122,8 +143,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             onCholesterol: (v) => setState(() => _cholesterol = v),
           ),
           _Step4(
-            dislikes: _dislikes, favorites: _favorites,
+            allergies: _allergies,
+            dislikes: _dislikes,
+            favorites: _favorites,
             cuisineStyle: _cuisineStyle,
+            allowTreats: _allowTreats,
+            onAllergies: (k) => setState(() {
+              if (_allergies.contains(k)) {
+                _allergies.remove(k);
+              } else {
+                _allergies.add(k);
+              }
+            }),
             onDislikes: (k) => setState(() {
               if (_dislikes.contains(k)) {
                 _dislikes.remove(k);
@@ -141,6 +172,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               }
             }),
             onCuisineStyle: (v) => setState(() => _cuisineStyle = v),
+            onAllowTreats: (v) => setState(() => _allowTreats = v),
           ),
         ],
       ),
@@ -149,10 +181,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (auth.error != null)
+            if (_stepError != null || auth.error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text(auth.error!,
+                child: Text(_stepError ?? auth.error!,
                     style: const TextStyle(color: AppColors.danger),
                     textAlign: TextAlign.center),
               ),
@@ -225,11 +257,11 @@ class _Step2 extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Age
-          _SliderTile('العمر', '$age سنة', age.toDouble(), 15, 80,
+          _SliderTile('العمر', '$age سنة', age.toDouble(), 10, 100,
               (v) => onAge(v.round())),
-          _SliderTile('الوزن', '${weight.toStringAsFixed(1)} كجم', weight, 40, 150,
+          _SliderTile('الوزن', '${weight.toStringAsFixed(1)} كجم', weight, 30, 300,
               onWeight),
-          _SliderTile('الطول', '${height.toStringAsFixed(0)} سم', height, 140, 210,
+          _SliderTile('الطول', '${height.toStringAsFixed(0)} سم', height, 100, 250,
               onHeight),
 
           // Activity
@@ -347,15 +379,23 @@ class _Step3 extends StatelessWidget {
 
 // ── Step 4: تفضيلات الطعام (جديد) ────────────────────────
 class _Step4 extends StatelessWidget {
-  final Set<String> dislikes, favorites;
+  final Set<String> allergies, dislikes, favorites;
   final String cuisineStyle;
-  final ValueChanged<String> onDislikes, onFavorites, onCuisineStyle;
+  final bool allowTreats;
+  final ValueChanged<String> onAllergies, onDislikes, onFavorites, onCuisineStyle;
+  final ValueChanged<bool> onAllowTreats;
 
   const _Step4({
-    required this.dislikes, required this.favorites,
+    required this.allergies,
+    required this.dislikes,
+    required this.favorites,
     required this.cuisineStyle,
-    required this.onDislikes, required this.onFavorites,
+    required this.allowTreats,
+    required this.onAllergies,
+    required this.onDislikes,
+    required this.onFavorites,
     required this.onCuisineStyle,
+    required this.onAllowTreats,
   });
 
   @override
@@ -372,6 +412,27 @@ class _Step4 extends StatelessWidget {
             activeColor: AppColors.primary,
             dense: true,
           )),
+          const Divider(height: 32),
+
+          Text('الحساسيات أو المكونات الواجب استبعادها',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          const Text('تُطبّق كقيد أمان قبل ترتيب أي اقتراح.',
+              style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8,
+            children: AppConfig.allergyLabels.entries.map((e) => FilterChip(
+              label: Text(e.value),
+              selected: allergies.contains(e.key),
+              onSelected: (_) => onAllergies(e.key),
+              selectedColor: AppColors.danger.withOpacity(0.15),
+              checkmarkColor: AppColors.danger,
+              labelStyle: TextStyle(
+                color: allergies.contains(e.key) ? AppColors.danger : AppColors.textDark,
+                fontWeight: allergies.contains(e.key) ? FontWeight.w600 : FontWeight.normal,
+              ),
+            )).toList(),
+          ),
           const Divider(height: 32),
 
           Text('أطعمة لا تفضّلها', style: Theme.of(context).textTheme.titleLarge),
@@ -411,6 +472,16 @@ class _Step4 extends StatelessWidget {
                 fontWeight: favorites.contains(e.key) ? FontWeight.w600 : FontWeight.normal,
               ),
             )).toList(),
+          ),
+          const SizedBox(height: 16),
+          SwitchListTile(
+            value: allowTreats,
+            onChanged: onAllowTreats,
+            title: const Text('السماح بخيارات مرنة أحيانًا'),
+            subtitle: const Text('لا يلغي الحساسية أو القيود الصلبة.',
+                style: TextStyle(fontSize: 12)),
+            activeColor: AppColors.primary,
+            contentPadding: EdgeInsets.zero,
           ),
         ]),
       );

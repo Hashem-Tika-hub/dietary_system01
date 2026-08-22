@@ -171,13 +171,18 @@ def upsert_food_feedback(
     لا يُستنتج التفاعل من سجل الوجبات. هذا الفصل يمنع أن يُفسَّر تناول
     المستخدم لطعام ما على أنه إعجاب أو تفضيل لتدريب النموذج التعاوني.
     """
-    food = db.query(Food).filter(Food.id == data.food_id, Food.is_active.is_(True)).first()
+    food_query = db.query(Food).filter(Food.is_active.is_(True))
+    if data.food_id is not None:
+        food = food_query.filter(Food.id == data.food_id).first()
+    else:
+        food = food_query.filter(Food.external_id == data.fdc_id).first()
+
     if not food:
         raise HTTPException(status_code=404, detail="الطعام غير موجود أو غير نشط")
 
     feedback = db.query(UserFoodFeedback).filter(
         UserFoodFeedback.user_id == user.id,
-        UserFoodFeedback.food_id == data.food_id,
+        UserFoodFeedback.food_id == food.id,
     ).first()
     if feedback:
         feedback.event_type = data.event_type
@@ -185,7 +190,7 @@ def upsert_food_feedback(
     else:
         feedback = UserFoodFeedback(
             user_id=user.id,
-            food_id=data.food_id,
+            food_id=food.id,
             event_type=data.event_type,
             score=FEEDBACK_SCORES[data.event_type],
         )

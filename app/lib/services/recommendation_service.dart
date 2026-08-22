@@ -53,6 +53,22 @@ class RecommendationService {
     return res.data as Map<String, dynamic>;
   }
 
+  // ── Explicit feedback and collaborative-readiness ──────
+  Future<void> submitFoodFeedback({
+    required String fdcId,
+    required String eventType,
+  }) async {
+    await _client.dio.post('/users/food-feedback', data: {
+      'fdc_id': fdcId,
+      'event_type': eventType,
+    });
+  }
+
+  Future<CollaborativeReadiness> getCollaborativeReadiness() async {
+    final res = await _client.dio.get('/users/food-feedback/readiness');
+    return CollaborativeReadiness.fromJson(res.data as Map<String, dynamic>);
+  }
+
   // ── History ───────────────────────────────────────────
   Future<List<dynamic>> getHistory() async {
     final res = await _client.dio.get('/recommendations/history');

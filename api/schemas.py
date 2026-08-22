@@ -290,9 +290,20 @@ class MealLogSummary(BaseModel):
 # ══════════════════════════════════════════════════════════
 
 class FoodFeedbackUpsert(BaseModel):
-    """إشارة صريحة يختارها المستخدم عن طعام من الكتالوج الموثق."""
-    food_id: int = Field(gt=0)
+    """إشارة صريحة يختارها المستخدم عن طعام من الكتالوج الموثق.
+
+    يقبل العقد ``food_id`` لعملاء API السابقين أو ``fdc_id`` الذي يصل من
+    توصيات Flutter وCSV الكتالوج. يجب إرسال معرف واحد فقط لتجنب الغموض.
+    """
+    food_id: Optional[int] = Field(default=None, gt=0)
+    fdc_id: Optional[str] = Field(default=None, min_length=1, max_length=100)
     event_type: str = Field(pattern="^(like|dislike|save|not_interested)$")
+
+    @model_validator(mode="after")
+    def require_exactly_one_food_identifier(self) -> "FoodFeedbackUpsert":
+        if (self.food_id is None) == (self.fdc_id is None):
+            raise ValueError("أرسل food_id أو fdc_id واحدًا فقط")
+        return self
 
 
 class FoodFeedbackResponse(BaseModel):

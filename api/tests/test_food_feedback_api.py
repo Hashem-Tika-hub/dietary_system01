@@ -108,3 +108,33 @@ def test_feedback_rejects_unknown_catalog_food(client_and_food) -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_feedback_accepts_the_catalog_external_id_from_recommendations(
+    client_and_food,
+) -> None:
+    client, _ = client_and_food
+
+    response = client.post(
+        "/users/food-feedback",
+        json={"fdc_id": "TEST-FEEDBACK-FOOD", "event_type": "save"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["event_type"] == "save"
+    assert response.json()["score"] == 0.5
+
+
+def test_feedback_rejects_ambiguous_food_identifiers(client_and_food) -> None:
+    client, food_id = client_and_food
+
+    response = client.post(
+        "/users/food-feedback",
+        json={
+            "food_id": food_id,
+            "fdc_id": "TEST-FEEDBACK-FOOD",
+            "event_type": "like",
+        },
+    )
+
+    assert response.status_code == 422
