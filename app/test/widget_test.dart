@@ -4,11 +4,22 @@ import 'package:dietary_app/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _DashboardAuthNotifier extends AuthNotifier {
   _DashboardAuthNotifier(UserModel user) : super() {
     state = AuthState(user: user);
   }
+}
+
+class _RouteProbe extends StatelessWidget {
+  final String route;
+  const _RouteProbe(this.route);
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(child: Text('ROUTE:$route')),
+      );
 }
 
 const _user = UserModel(
@@ -78,15 +89,51 @@ DailyNutritionProgress _progress({required int loggedMeals}) {
   );
 }
 
-Widget _dashboardUnderTest(DailyNutritionProgress progress) {
+GoRouter _dashboardRouter() => GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+        GoRoute(
+          path: '/recommendations',
+          builder: (_, __) => const _RouteProbe('/recommendations'),
+        ),
+        GoRoute(path: '/weekly', builder: (_, __) => const _RouteProbe('/weekly')),
+        GoRoute(path: '/foods', builder: (_, __) => const _RouteProbe('/foods')),
+        GoRoute(path: '/profile', builder: (_, __) => const _RouteProbe('/profile')),
+      ],
+    );
+
+Widget _dashboardUnderTest(
+  DailyNutritionProgress progress, {
+  GoRouter? router,
+  int Function()? onTargetsLoad,
+  int Function()? onProgressLoad,
+  int Function()? onReadinessLoad,
+}) {
+  final dashboardRouter = router ?? _dashboardRouter();
   return ProviderScope(
     overrides: [
       authProvider.overrideWith((ref) => _DashboardAuthNotifier(_user)),
-      nutritionTargetsProvider.overrideWith((ref) async => _targets),
-      dailyNutritionProgressProvider.overrideWith((ref) async => progress),
-      collaborativeReadinessProvider.overrideWith((ref) async => _coldStart),
+      nutritionTargetsProvider.overrideWith((ref) async {
+        onTargetsLoad?.call();
+        return _targets;
+      }),
+      dailyNutritionProgressProvider.overrideWith((ref) async {
+        onProgressLoad?.call();
+        return progress;
+      }),
+      collaborativeReadinessProvider.overrideWith((ref) async {
+        onReadinessLoad?.call();
+        return _coldStart;
+      }),
     ],
-    child: const MaterialApp(home: HomeScreen()),
+    child: MaterialApp.router(
+      routerConfig: dashboardRouter,
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: child!,
+      ),
+    ),
   );
 }
 
@@ -120,5 +167,70 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('استكشف وجبة لتسجيلها'), findsOneWidget);
+  });
+
+  testWidgets('Dashboard recommendation actions navigate to recommendations',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(_dashboardUnderTest(_progress(loggedMeals: 2)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('توصية وجبة'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ROUTE:/recommendations'), findsOneWidget);
+  });
+
+  testWidgets('Dashboard weekly and food actions navigate to their routes',
+      (WidgetTester tester) async {
+    final router = _dashboardRouter();
+    await tester.pumpWidget(_dashboardUnderTest(_progress(loggedMeals: 2), router: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('خطة الأسبوع'));
+    await tester.pumpAndSettle();
+    expect(find.text('ROUTE:/weekly'), findsOneWidget);
+
+    router.go('/home');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('بحث الأطعمة'));
+    await tester.pumpAndSettle();
+    expect(find.text('ROUTE:/foods'), findsOneWidget);
+  });
+
+  testWidgets('Dashboard profile action navigates to the profile route',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(_dashboardUnderTest(_progress(loggedMeals: 2)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('الملف الشخصي'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ROUTE:/profile'), findsOneWidget);
+  });
+
+  testWidgets('pull to refresh reloads all Dashboard data sources',
+      (WidgetTester tester) async {
+    var targetLoads = 0;
+    var progressLoads = 0;
+    var readinessLoads = 0;
+
+    await tester.pumpWidget(
+      _dashboardUnderTest(
+        _progress(loggedMeals: 2),
+        onTargetsLoad: () => targetLoads += 1,
+        onProgressLoad: () => progressLoads += 1,
+        onReadinessLoad: () => readinessLoads += 1,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect((targetLoads, progressLoads, readinessLoads), (1, 1, 1));
+
+    await tester.drag(find.byType(ListView), const Offset(0, 300));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(targetLoads, greaterThanOrEqualTo(2));
+    expect(progressLoads, greaterThanOrEqualTo(2));
+    expect(readinessLoads, greaterThanOrEqualTo(2));
   });
 }
