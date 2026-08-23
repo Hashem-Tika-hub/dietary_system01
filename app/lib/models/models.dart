@@ -112,6 +112,67 @@ class NutritionTargets {
       );
 }
 
+class NutrientProgress {
+  final double target;
+  final double consumed;
+  final double remaining;
+  final double progressRatio;
+
+  const NutrientProgress({
+    required this.target,
+    required this.consumed,
+    required this.remaining,
+    required this.progressRatio,
+  });
+
+  factory NutrientProgress.fromJson(Map<String, dynamic> j) => NutrientProgress(
+        target: (j['target'] ?? 0).toDouble(),
+        consumed: (j['consumed'] ?? 0).toDouble(),
+        remaining: (j['remaining'] ?? 0).toDouble(),
+        progressRatio: (j['progress_ratio'] ?? 0).toDouble(),
+      );
+
+  /// نسبة آمنة للعرض في ProgressIndicator؛ تظل قيمة API الأصلية متاحة أعلاه.
+  double get clampedProgress => progressRatio.clamp(0.0, 1.0).toDouble();
+  bool get isOverTarget => remaining < 0;
+}
+
+class DailyNutritionProgress {
+  final DateTime date;
+  final int loggedMeals;
+  final NutrientProgress calories;
+  final NutrientProgress protein;
+  final NutrientProgress carbs;
+  final NutrientProgress fat;
+
+  const DailyNutritionProgress({
+    required this.date,
+    required this.loggedMeals,
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
+
+  factory DailyNutritionProgress.fromJson(Map<String, dynamic> j) =>
+      DailyNutritionProgress(
+        date: DateTime.parse(j['date'] as String),
+        loggedMeals: j['logged_meals'] ?? 0,
+        calories: NutrientProgress.fromJson(
+          j['calories'] as Map<String, dynamic>? ?? const {},
+        ),
+        protein: NutrientProgress.fromJson(
+          j['protein'] as Map<String, dynamic>? ?? const {},
+        ),
+        carbs: NutrientProgress.fromJson(
+          j['carbs'] as Map<String, dynamic>? ?? const {},
+        ),
+        fat: NutrientProgress.fromJson(
+          j['fat'] as Map<String, dynamic>? ?? const {},
+        ),
+      );
+}
+
 class MealTarget {
   final String label;
   final double calories;

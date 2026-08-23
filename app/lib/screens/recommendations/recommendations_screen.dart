@@ -5,6 +5,7 @@ import '../../core/api_client.dart' show extractError;
 import '../../core/constants.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
+import '../../services/recommendation_service.dart';
 
 class RecommendationsScreen extends ConsumerWidget {
   const RecommendationsScreen({super.key});
@@ -123,7 +124,11 @@ class _MealRecommendationView extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         ...data.recommendations.asMap().entries.map(
-              (entry) => _FoodCard(food: entry.value, rank: entry.key + 1),
+              (entry) => _FoodCard(
+                food: entry.value,
+                rank: entry.key + 1,
+                mealType: data.meal,
+              ),
             ),
       ],
     );
@@ -228,7 +233,13 @@ class _CollaborativeReadinessCard extends StatelessWidget {
 class _FoodCard extends ConsumerWidget {
   final FoodRecommendation food;
   final int rank;
-  const _FoodCard({required this.food, required this.rank});
+  final String mealType;
+
+  const _FoodCard({
+    required this.food,
+    required this.rank,
+    required this.mealType,
+  });
 
   Future<void> _submitFeedback(
     BuildContext context,
@@ -248,6 +259,52 @@ class _FoodCard extends ConsumerWidget {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تعذّر حفظ تفاعلك، حاول مرة أخرى')),
+      );
+    }
+  }
+
+  Future<void> _logFoodAsConsumed(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تسجيل وجبة'),
+        content: Text(
+          'هل تناولت ${food.name} بالحصة المقترحة (${food.portionG.toStringAsFixed(0)} جرام)؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('تسجيلها'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await RecommendationService().createMealLog(
+        mealType: mealType,
+        foodName: food.name,
+        fdcId: food.fdcId,
+        portionG: food.portionG,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+      );
+      ref.invalidate(dailyNutritionProgressProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تمت إضافة الوجبة إلى سجل اليوم')),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر تسجيل الوجبة، حاول مرة أخرى')),
       );
     }
   }
@@ -370,6 +427,15 @@ class _FoodCard extends ConsumerWidget {
               ],
             ],
             const Divider(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _logFoodAsConsumed(context, ref),
+                icon: const Icon(Icons.add_task_outlined, size: 18),
+                label: const Text('سجّل كوجبة مأكولة'),
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 const Expanded(

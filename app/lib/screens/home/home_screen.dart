@@ -8,16 +8,18 @@ import '../../providers/providers.dart';
 
 /// لوحة التحكم اليومية.
 ///
-/// تعرض هذه الشاشة أهدافًا محسوبة من API وتدفقات حقيقية داخل التطبيق فقط؛
-/// لا تعرض «سعرات مستهلكة» أو «تقدم يومي» قبل توفر سجل وجبات موثوق.
+/// تعرض هذه الشاشة الأهداف المحسوبة والاستهلاك الفعلي من MealLog كلٌّ منهما
+/// بوضوح؛ لذلك لا يُعامل الهدف المخطط على أنه استهلاك تحقق بالفعل.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(nutritionTargetsProvider);
+    ref.invalidate(dailyNutritionProgressProvider);
     ref.invalidate(collaborativeReadinessProvider);
     await Future.wait([
       ref.read(nutritionTargetsProvider.future),
+      ref.read(dailyNutritionProgressProvider.future),
       ref.read(collaborativeReadinessProvider.future),
     ]);
   }
@@ -31,6 +33,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     final targets = ref.watch(nutritionTargetsProvider);
+    final dailyProgress = ref.watch(dailyNutritionProgressProvider);
     final readiness = ref.watch(collaborativeReadinessProvider);
     final user = auth.user!;
     final suggestedMeal = _suggestedMealForNow();
@@ -50,20 +53,29 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
 
-              // 1. أهداف المستخدم الفعلية من الخادم.
+              // 1. الأهداف المخططة مقابل الاستهلاك المأخوذ من سجل الوجبات.
               targets.when(
-                loading: () => const _LoadingPanel(height: 176),
+                loading: () => const _LoadingPanel(height: 220),
                 error: (error, _) => _RetryPanel(
                   title: 'تعذّر تحميل أهدافك اليومية',
                   message: extractError(error),
                   onRetry: () => ref.invalidate(nutritionTargetsProvider),
                 ),
-                data: (target) => _DailyTargetCard(
-                  targets: target,
-                  onRecommend: () => _openMealRecommendations(
-                    context,
-                    ref,
-                    suggestedMeal.key,
+                data: (target) => dailyProgress.when(
+                  loading: () => const _LoadingPanel(height: 220),
+                  error: (error, _) => _RetryPanel(
+                    title: 'تعذّر تحميل سجل اليوم',
+                    message: extractError(error),
+                    onRetry: () => ref.invalidate(dailyNutritionProgressProvider),
+                  ),
+                  data: (progress) => _DailyNutritionCard(
+                    targets: target,
+                    progress: progress,
+                    onRecommend: () => _openMealRecommendations(
+                      context,
+                      ref,
+                      suggestedMeal.key,
+                    ),
                   ),
                 ),
               ),
@@ -271,82 +283,116 @@ class _DashboardHeader extends StatelessWidget {
       );
 }
 
-class _DailyTargetCard extends StatelessWidget {
+class _DailyNutritionCard extends StatelessWidget {
   final dynamic targets;
+  final dynamic progress;
   final VoidCallback onRecommend;
 
-  const _DailyTargetCard({required this.targets, required this.onRecommend});
+  const _DailyNutritionCard({
+    required this.targets,
+    required this.progress,
+    required this.onRecommend,
+  });
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFF1559A8)],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
+  Widget build(BuildContext context) {
+    final calories = progress.calories;
+    final hasLogs = progress.loggedMeals > 0;
+    final remainingLabel = calories.isOverTarget
+        ? 'تجاوزت الهدف بـ ${(-calories.remaining).toStringAsFixed(0)} كيلوكالوري'
+        : 'متبقٍ ${calories.remaining.toStringAsFixed(0)} كيلوكالوري';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFF1559A8)],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.22),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.track_changes_outlined, color: Colors.white70, size: 18),
-                SizedBox(width: 7),
-                Text('هدفك اليومي المحسوب',
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.track_changes_outlined, color: Colors.white70, size: 18),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text('متابعة اليوم',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-              ],
+              ),
+              Text(
+                hasLogs ? '${progress.loggedMeals} وجبات مسجلة' : 'لا توجد وجبات مسجلة',
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${calories.consumed.toStringAsFixed(0)} / ${calories.target.toStringAsFixed(0)} كيلوكالوري',
+            style: const TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 7),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: calories.clampedProgress,
+              minHeight: 8,
+              color: calories.isOverTarget ? AppColors.accent : Colors.white,
+              backgroundColor: Colors.white24,
             ),
-            const SizedBox(height: 12),
-            Text(
-              '${targets.dailyCalories.toStringAsFixed(0)} كيلوكالوري',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
+          ),
+          const SizedBox(height: 7),
+          Text(remainingLabel, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _ConsumedMacroMetric(label: 'بروتين', nutrient: progress.protein),
+              _ConsumedMacroMetric(label: 'كارب', nutrient: progress.carbs),
+              _ConsumedMacroMetric(label: 'دهون', nutrient: progress.fat),
+            ],
+          ),
+          const SizedBox(height: 15),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onRecommend,
+              icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+              label: Text(hasLogs ? 'استكشف توصيات إضافية' : 'استكشف وجبة لتسجيلها'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white54),
+                padding: const EdgeInsets.symmetric(vertical: 11),
               ),
             ),
-            const SizedBox(height: 15),
-            Row(
-              children: [
-                _TargetMetric(label: 'بروتين', value: targets.proteinG),
-                _TargetMetric(label: 'كارب', value: targets.carbsG),
-                _TargetMetric(label: 'دهون', value: targets.fatG),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onRecommend,
-                icon: const Icon(Icons.auto_awesome_outlined, size: 18),
-                label: const Text('اقترح لي وجبة'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white54),
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                ),
-              ),
+          ),
+          if (!hasLogs) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'سيظهر التقدم بعد إضافة وجبة إلى سجل وجباتك الفعلي.',
+              style: TextStyle(color: Colors.white70, fontSize: 11),
             ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }
 
-class _TargetMetric extends StatelessWidget {
+class _ConsumedMacroMetric extends StatelessWidget {
   final String label;
-  final double value;
+  final dynamic nutrient;
 
-  const _TargetMetric({required this.label, required this.value});
+  const _ConsumedMacroMetric({required this.label, required this.nutrient});
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -356,8 +402,8 @@ class _TargetMetric extends StatelessWidget {
             Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
             const SizedBox(height: 3),
             Text(
-              '${value.toStringAsFixed(0)}g',
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+              '${nutrient.consumed.toStringAsFixed(0)} / ${nutrient.target.toStringAsFixed(0)}g',
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ],
         ),

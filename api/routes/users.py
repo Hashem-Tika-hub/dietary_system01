@@ -7,7 +7,7 @@
 #  POST /users/meal-logs         — تسجيل وجبة جديدة
 # ============================================================
 
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,7 +19,8 @@ from api.db_models    import User, MealLog, Food, UserFoodFeedback
 from api.schemas      import (UserResponse, UserUpdate,
                                NutritionTargets, MealTarget,
                                MealLogCreate, MealLogUpdate, MealLogResponse,
-                               MealLogSummary, FoodFeedbackUpsert,
+                               MealLogSummary, DailyNutritionProgress,
+                               NutrientProgress, FoodFeedbackUpsert,
                                FoodFeedbackResponse, CollaborativeReadinessResponse,
                                validate_body_profile_sanity)
 from api.services.feedback_collaborative_filter import (
@@ -156,6 +157,84 @@ def get_meal_log_summary(
     return MealLogSummary(
         count=int(count), calories=float(calories), protein=float(protein),
         carbs=float(carbs), fat=float(fat),
+    )
+
+
+def _build_nutrient_progress(*, target: float, consumed: float) -> NutrientProgress:
+    """Return dashboard-friendly progress without interpreting it clinically."""
+    safe_target = float(target)
+    safe_consumed = float(consumed)
+    return NutrientProgress(
+        target=safe_target,
+        consumed=safe_consumed,
+        remaining=safe_target - safe_consumed,
+        progress_ratio=(safe_consumed / safe_target) if safe_target > 0 else 0.0,
+    )
+
+
+@router.get("/meal-logs/daily-progress", response_model=DailyNutritionProgress,
+            summary="تقدم الاستهلاك اليومي للوحة التحكم")
+def get_daily_nutrition_progress(
+    day: Optional[date] = Query(default=None, description="تاريخ بصيغة YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Compare one calendar day's logged meals with current profile-based targets.
+
+    The endpoint deliberately separates planned targets from logged consumption.
+    It returns zero consumption when no meals were logged rather than inventing a
+    progress value, and it never changes recommendation safety rules.
+    """
+    selected_day = day or datetime.now().date()
+    day_start = datetime.combine(selected_day, time.min)
+    next_day_start = day_start + timedelta(days=1)
+
+    count, calories, protein, carbs, fat = (
+        db.query(
+            func.count(MealLog.id),
+            func.coalesce(func.sum(MealLog.calories), 0.0),
+            func.coalesce(func.sum(MealLog.protein), 0.0),
+            func.coalesce(func.sum(MealLog.carbs), 0.0),
+            func.coalesce(func.sum(MealLog.fat), 0.0),
+        )
+        .filter(
+            MealLog.user_id == user.id,
+            MealLog.date >= day_start,
+            MealLog.date < next_day_start,
+        )
+        .one()
+    )
+
+    targets = engine.get_user_targets(
+        {
+            "name": user.name,
+            "age": user.age,
+            "gender": user.gender,
+            "weight": user.weight,
+            "height": user.height,
+            "activity_level": user.activity_level,
+            "goal": user.goal,
+            "has_diabetes": user.has_diabetes,
+            "has_bp": user.has_bp,
+            "has_cholesterol": user.has_cholesterol,
+            "allergies": user.allergies or [],
+        }
+    )
+    return DailyNutritionProgress(
+        date=selected_day,
+        logged_meals=int(count),
+        calories=_build_nutrient_progress(
+            target=targets["daily_calories"], consumed=float(calories)
+        ),
+        protein=_build_nutrient_progress(
+            target=targets["protein_g"], consumed=float(protein)
+        ),
+        carbs=_build_nutrient_progress(
+            target=targets["carbs_g"], consumed=float(carbs)
+        ),
+        fat=_build_nutrient_progress(
+            target=targets["fat_g"], consumed=float(fat)
+        ),
     )
 
 

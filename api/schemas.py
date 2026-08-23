@@ -3,7 +3,7 @@
 #  Pydantic يتحقق تلقائياً من صحة البيانات الواردة
 # ============================================================
 
-from datetime import datetime
+from datetime import date, datetime
 from math import isfinite
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -283,6 +283,32 @@ class MealLogSummary(BaseModel):
     protein: float
     carbs: float
     fat: float
+
+
+class NutrientProgress(BaseModel):
+    """هدف ومستهلك ومتَبقٍ لمغذٍ واحد في اليوم المحدد.
+
+    هذه قيم متابعة حسابية للسجل الذي أدخله المستخدم، وليست تشخيصًا طبيًا.
+    قد تكون ``remaining`` سالبة عند تجاوز المستخدم للهدف التقريبي.
+    """
+    target: float
+    consumed: float
+    remaining: float
+    progress_ratio: float = Field(ge=0)
+
+
+class DailyNutritionProgress(BaseModel):
+    """ملخص اليوم المعروض في Dashboard.
+
+    يستند الاستهلاك إلى MealLog في اليوم المطلوب فقط، بينما تحسب الأهداف من
+    الملف الشخصي الحالي على الخادم لضمان اتساق الأرقام بين العميل والخادم.
+    """
+    date: date
+    logged_meals: int
+    calories: NutrientProgress
+    protein: NutrientProgress
+    carbs: NutrientProgress
+    fat: NutrientProgress
 
 
 # ══════════════════════════════════════════════════════════

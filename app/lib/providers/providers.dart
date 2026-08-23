@@ -102,6 +102,16 @@ final nutritionTargetsProvider =
 });
 
 // ══════════════════════════════════════════════════════════
+//  DAILY LOGGED-MEAL PROGRESS
+// ══════════════════════════════════════════════════════════
+final dailyNutritionProgressProvider =
+    FutureProvider<DailyNutritionProgress>((ref) async {
+  final auth = ref.watch(authProvider);
+  if (!auth.isLoggedIn) throw Exception('Not logged in');
+  return RecommendationService().getDailyNutritionProgress();
+});
+
+// ══════════════════════════════════════════════════════════
 //  MEAL RECOMMENDATIONS
 // ══════════════════════════════════════════════════════════
 final selectedMealProvider = StateProvider<String>((ref) => 'lunch');
