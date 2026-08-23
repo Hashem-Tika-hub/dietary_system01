@@ -102,6 +102,16 @@ final nutritionTargetsProvider =
 });
 
 // ══════════════════════════════════════════════════════════
+//  DAILY LOGGED-MEAL PROGRESS
+// ══════════════════════════════════════════════════════════
+final dailyNutritionProgressProvider =
+    FutureProvider<DailyNutritionProgress>((ref) async {
+  final auth = ref.watch(authProvider);
+  if (!auth.isLoggedIn) throw Exception('Not logged in');
+  return RecommendationService().getDailyNutritionProgress();
+});
+
+// ══════════════════════════════════════════════════════════
 //  MEAL RECOMMENDATIONS
 // ══════════════════════════════════════════════════════════
 final selectedMealProvider = StateProvider<String>((ref) => 'lunch');
@@ -112,6 +122,43 @@ final mealRecommendationsProvider =
   if (!auth.isLoggedIn) throw Exception('Not logged in');
   return RecommendationService().getMealRecommendations(meal, topK: 5);
 });
+
+// ══════════════════════════════════════════════════════════
+//  EXPLICIT FEEDBACK AND CF READINESS
+// ══════════════════════════════════════════════════════════
+final collaborativeReadinessProvider =
+    FutureProvider<CollaborativeReadiness>((ref) async {
+  final auth = ref.watch(authProvider);
+  if (!auth.isLoggedIn) throw Exception('Not logged in');
+  return RecommendationService().getCollaborativeReadiness();
+});
+
+class FoodFeedbackNotifier extends StateNotifier<AsyncValue<void>> {
+  FoodFeedbackNotifier() : super(const AsyncValue.data(null));
+
+  Future<bool> submit({
+    required String fdcId,
+    required String eventType,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await RecommendationService().submitFoodFeedback(
+        fdcId: fdcId,
+        eventType: eventType,
+      );
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      return false;
+    }
+  }
+}
+
+final foodFeedbackProvider =
+    StateNotifierProvider<FoodFeedbackNotifier, AsyncValue<void>>(
+  (ref) => FoodFeedbackNotifier(),
+);
 
 // ══════════════════════════════════════════════════════════
 //  WEEKLY PLAN

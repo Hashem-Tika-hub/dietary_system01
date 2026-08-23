@@ -96,6 +96,11 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               _InfoRow('الطابع',
                   AppConfig.cuisineStyleLabels[user.cuisineStyle] ?? user.cuisineStyle),
+              _InfoRow('الحساسية',
+                  user.allergies.isEmpty ? '— لا توجد حساسية مسجلة'
+                      : user.allergies.map((key) =>
+                          AppConfig.allergyLabels[key] ?? key).join('، ')),
+              _InfoRow('خيارات مرنة', user.allowTreats ? 'مسموح بها' : 'غير مفعّلة'),
               _InfoRow('لا يفضّل',
                   user.dislikes.isEmpty ? '— لا شيء'
                       : user.dislikes.map((k) => AppConfig.foodPrefLabels[k] ?? k).join('، ')),
@@ -235,8 +240,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (ok) {
         Navigator.pop(context);
       } else {
+        final message = ref.read(authProvider).error ??
+            'تعذّر حفظ التعديلات، حاول مرة أخرى';
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تعذّر حفظ التعديلات، حاول مرة أخرى')));
+          SnackBar(content: Text(message)),
+        );
       }
     }
   }
@@ -366,17 +374,21 @@ class _EditPreferencesSheet extends ConsumerStatefulWidget {
 }
 
 class _EditPreferencesSheetState extends ConsumerState<_EditPreferencesSheet> {
+  late Set<String> _allergies = {...widget.user.allergies};
   late Set<String> _dislikes  = {...widget.user.dislikes};
   late Set<String> _favorites = {...widget.user.favorites};
   late String _cuisineStyle   = widget.user.cuisineStyle;
+  late bool _allowTreats      = widget.user.allowTreats;
   bool _saving = false;
 
   Future<void> _save() async {
     setState(() => _saving = true);
     final ok = await ref.read(authProvider.notifier).updateProfile({
+      'allergies':     _allergies.toList(),
       'dislikes':      _dislikes.toList(),
       'favorites':     _favorites.toList(),
       'cuisine_style': _cuisineStyle,
+      'allow_treats':  _allowTreats,
     });
     if (mounted) {
       setState(() => _saving = false);
@@ -409,6 +421,29 @@ class _EditPreferencesSheetState extends ConsumerState<_EditPreferencesSheet> {
               activeColor: AppColors.primary, dense: true,
               contentPadding: EdgeInsets.zero,
             )),
+            const SizedBox(height: 16),
+
+            Text('الحساسيات أو المكونات الواجب استبعادها',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            const Text('تطبّق كقيود صلبة قبل ترتيب الاقتراحات.',
+                style: TextStyle(fontSize: 12, color: AppColors.textGrey)),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 8,
+              children: AppConfig.allergyLabels.entries.map((entry) => FilterChip(
+                label: Text(entry.value),
+                selected: _allergies.contains(entry.key),
+                onSelected: (_) => setState(() {
+                  if (_allergies.contains(entry.key)) {
+                    _allergies.remove(entry.key);
+                  } else {
+                    _allergies.add(entry.key);
+                  }
+                }),
+                selectedColor: AppColors.danger.withOpacity(0.15),
+                checkmarkColor: AppColors.danger,
+              )).toList(),
+            ),
             const SizedBox(height: 16),
 
             Text('لا يفضّلها', style: Theme.of(context).textTheme.titleMedium),
@@ -448,6 +483,16 @@ class _EditPreferencesSheetState extends ConsumerState<_EditPreferencesSheet> {
                 selectedColor: AppColors.secondary.withOpacity(0.15),
                 checkmarkColor: AppColors.secondary,
               )).toList(),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              value: _allowTreats,
+              onChanged: (value) => setState(() => _allowTreats = value),
+              title: const Text('السماح بخيارات مرنة أحيانًا'),
+              subtitle: const Text('لا يلغي الحساسية أو القيود الصلبة.',
+                  style: TextStyle(fontSize: 12)),
+              activeColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
             ),
             const SizedBox(height: 24),
 

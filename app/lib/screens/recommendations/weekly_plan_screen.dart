@@ -187,24 +187,46 @@ class _MealSection extends ConsumerWidget {
               final cal  = (f['calories'] ?? 0).toStringAsFixed(0);
               final g    = (f['portion_g'] ?? 0).toStringAsFixed(0);
               final slot = f['slot'] ?? '';
+              final reason = f['recommendation_reason']?.toString() ?? '';
+              final diversityApplied = f['diversity_applied'] == true;
               return InkWell(
                 onTap: () => _openSwapSheet(context, ref, f),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(children: [
-                    const Icon(Icons.restaurant, size: 14,
-                        color: AppColors.textGrey),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(name,
-                        style: const TextStyle(fontSize: 13))),
-                    Text('${g}g · ${cal}ك',
-                        style: TextStyle(fontSize: 11,
-                            color: _color, fontWeight: FontWeight.w500)),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.swap_horiz, size: 16,
-                        color: AppColors.textGrey),
-                  ]),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.restaurant, size: 14,
+                            color: AppColors.textGrey),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(name,
+                            style: const TextStyle(fontSize: 13))),
+                        Text('${g}g · ${cal}ك',
+                            style: TextStyle(fontSize: 11,
+                                color: _color, fontWeight: FontWeight.w500)),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.swap_horiz, size: 16,
+                            color: AppColors.textGrey),
+                      ]),
+                      if (reason.isNotEmpty || diversityApplied)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, right: 20),
+                          child: Row(children: [
+                            Icon(diversityApplied ? Icons.diversity_2 : Icons.lightbulb_outline,
+                                size: 13, color: AppColors.secondary),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text(
+                              reason.isNotEmpty
+                                  ? reason
+                                  : 'اختيار متنوع لتقليل التكرار',
+                              style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+                            )),
+                          ]),
+                        ),
+                    ],
+                  ),
                 ),
               );
               // slot يُستخدم داخل _openSwapSheet أدناه

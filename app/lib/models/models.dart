@@ -112,6 +112,67 @@ class NutritionTargets {
       );
 }
 
+class NutrientProgress {
+  final double target;
+  final double consumed;
+  final double remaining;
+  final double progressRatio;
+
+  const NutrientProgress({
+    required this.target,
+    required this.consumed,
+    required this.remaining,
+    required this.progressRatio,
+  });
+
+  factory NutrientProgress.fromJson(Map<String, dynamic> j) => NutrientProgress(
+        target: (j['target'] ?? 0).toDouble(),
+        consumed: (j['consumed'] ?? 0).toDouble(),
+        remaining: (j['remaining'] ?? 0).toDouble(),
+        progressRatio: (j['progress_ratio'] ?? 0).toDouble(),
+      );
+
+  /// نسبة آمنة للعرض في ProgressIndicator؛ تظل قيمة API الأصلية متاحة أعلاه.
+  double get clampedProgress => progressRatio.clamp(0.0, 1.0).toDouble();
+  bool get isOverTarget => remaining < 0;
+}
+
+class DailyNutritionProgress {
+  final DateTime date;
+  final int loggedMeals;
+  final NutrientProgress calories;
+  final NutrientProgress protein;
+  final NutrientProgress carbs;
+  final NutrientProgress fat;
+
+  const DailyNutritionProgress({
+    required this.date,
+    required this.loggedMeals,
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
+
+  factory DailyNutritionProgress.fromJson(Map<String, dynamic> j) =>
+      DailyNutritionProgress(
+        date: DateTime.parse(j['date'] as String),
+        loggedMeals: j['logged_meals'] ?? 0,
+        calories: NutrientProgress.fromJson(
+          j['calories'] as Map<String, dynamic>? ?? const {},
+        ),
+        protein: NutrientProgress.fromJson(
+          j['protein'] as Map<String, dynamic>? ?? const {},
+        ),
+        carbs: NutrientProgress.fromJson(
+          j['carbs'] as Map<String, dynamic>? ?? const {},
+        ),
+        fat: NutrientProgress.fromJson(
+          j['fat'] as Map<String, dynamic>? ?? const {},
+        ),
+      );
+}
+
 class MealTarget {
   final String label;
   final double calories;
@@ -202,6 +263,10 @@ class FoodRecommendation {
   final double  fat;
   final double  portionG;
   final double  hybridScore;
+  final int?    foodCluster;
+  final String  recommendationReason;
+  final List<String> recommendationReasons;
+  final bool    diversityApplied;
 
   const FoodRecommendation({
     required this.fdcId,
@@ -215,6 +280,10 @@ class FoodRecommendation {
     required this.fat,
     required this.portionG,
     required this.hybridScore,
+    this.foodCluster,
+    this.recommendationReason = '',
+    this.recommendationReasons = const [],
+    this.diversityApplied = false,
   });
 
   factory FoodRecommendation.fromJson(Map<String, dynamic> j) =>
@@ -230,6 +299,14 @@ class FoodRecommendation {
         fat:         (j['fat'] ?? 0).toDouble(),
         portionG:    (j['portion_g'] ?? 100).toDouble(),
         hybridScore: (j['hybrid_score'] ?? 0).toDouble(),
+        foodCluster: j['food_cluster'] == null
+            ? null
+            : (j['food_cluster'] as num).toInt(),
+        recommendationReason: j['recommendation_reason'] ?? '',
+        recommendationReasons: (j['recommendation_reasons'] as List? ?? [])
+            .map((e) => e.toString())
+            .toList(),
+        diversityApplied: j['diversity_applied'] ?? false,
       );
 }
 
@@ -238,12 +315,18 @@ class MealRecommendation {
   final String   mealLabel;
   final double   targetCalories;
   final List<FoodRecommendation> recommendations;
+  final String rankingBasis;
+  final double contentWeight;
+  final double collaborativeWeight;
 
   const MealRecommendation({
     required this.meal,
     required this.mealLabel,
     required this.targetCalories,
     required this.recommendations,
+    this.rankingBasis = 'content_based',
+    this.contentWeight = 1.0,
+    this.collaborativeWeight = 0.0,
   });
 
   factory MealRecommendation.fromJson(Map<String, dynamic> j) =>
@@ -254,5 +337,36 @@ class MealRecommendation {
         recommendations: (j['recommendations'] as List? ?? [])
             .map((e) => FoodRecommendation.fromJson(e))
             .toList(),
+        rankingBasis: j['ranking_basis'] ?? 'content_based',
+        contentWeight: (j['content_weight'] ?? 1).toDouble(),
+        collaborativeWeight: (j['collaborative_weight'] ?? 0).toDouble(),
       );
+
+class CollaborativeReadiness {
+  final bool ready;
+  final String reason;
+  final int interactionCount;
+  final int uniqueUsers;
+  final int uniqueFoods;
+  final int targetUserInteractions;
+
+  const CollaborativeReadiness({
+    required this.ready,
+    required this.reason,
+    required this.interactionCount,
+    required this.uniqueUsers,
+    required this.uniqueFoods,
+    required this.targetUserInteractions,
+  });
+
+  factory CollaborativeReadiness.fromJson(Map<String, dynamic> j) =>
+      CollaborativeReadiness(
+        ready: j['ready'] ?? false,
+        reason: j['reason'] ?? '',
+        interactionCount: j['interaction_count'] ?? 0,
+        uniqueUsers: j['unique_users'] ?? 0,
+        uniqueFoods: j['unique_foods'] ?? 0,
+        targetUserInteractions: j['target_user_interactions'] ?? 0,
+      );
+}
 }

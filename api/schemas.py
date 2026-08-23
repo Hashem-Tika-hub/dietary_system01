@@ -3,7 +3,7 @@
 #  Pydantic يتحقق تلقائياً من صحة البيانات الواردة
 # ============================================================
 
-from datetime import datetime
+from datetime import date, datetime
 from math import isfinite
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -285,14 +285,51 @@ class MealLogSummary(BaseModel):
     fat: float
 
 
+class NutrientProgress(BaseModel):
+    """هدف ومستهلك ومتَبقٍ لمغذٍ واحد في اليوم المحدد.
+
+    هذه قيم متابعة حسابية للسجل الذي أدخله المستخدم، وليست تشخيصًا طبيًا.
+    قد تكون ``remaining`` سالبة عند تجاوز المستخدم للهدف التقريبي.
+    """
+    target: float
+    consumed: float
+    remaining: float
+    progress_ratio: float = Field(ge=0)
+
+
+class DailyNutritionProgress(BaseModel):
+    """ملخص اليوم المعروض في Dashboard.
+
+    يستند الاستهلاك إلى MealLog في اليوم المطلوب فقط، بينما تحسب الأهداف من
+    الملف الشخصي الحالي على الخادم لضمان اتساق الأرقام بين العميل والخادم.
+    """
+    date: date
+    logged_meals: int
+    calories: NutrientProgress
+    protein: NutrientProgress
+    carbs: NutrientProgress
+    fat: NutrientProgress
+
+
 # ══════════════════════════════════════════════════════════
 #  التفاعلات الصريحة للتوصية التعاونية
 # ══════════════════════════════════════════════════════════
 
 class FoodFeedbackUpsert(BaseModel):
-    """إشارة صريحة يختارها المستخدم عن طعام من الكتالوج الموثق."""
-    food_id: int = Field(gt=0)
+    """إشارة صريحة يختارها المستخدم عن طعام من الكتالوج الموثق.
+
+    يقبل العقد ``food_id`` لعملاء API السابقين أو ``fdc_id`` الذي يصل من
+    توصيات Flutter وCSV الكتالوج. يجب إرسال معرف واحد فقط لتجنب الغموض.
+    """
+    food_id: Optional[int] = Field(default=None, gt=0)
+    fdc_id: Optional[str] = Field(default=None, min_length=1, max_length=100)
     event_type: str = Field(pattern="^(like|dislike|save|not_interested)$")
+
+    @model_validator(mode="after")
+    def require_exactly_one_food_identifier(self) -> "FoodFeedbackUpsert":
+        if (self.food_id is None) == (self.fdc_id is None):
+            raise ValueError("أرسل food_id أو fdc_id واحدًا فقط")
+        return self
 
 
 class FoodFeedbackResponse(BaseModel):
