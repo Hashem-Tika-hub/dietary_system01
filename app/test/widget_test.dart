@@ -137,6 +137,17 @@ Widget _dashboardUnderTest(
   );
 }
 
+Future<void> _scrollDashboardUntilVisible(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  await tester.scrollUntilVisible(
+    finder,
+    240,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
 void main() {
   testWidgets('Dashboard shows logged calories, target, remaining value and actions',
       (WidgetTester tester) async {
@@ -150,8 +161,10 @@ void main() {
     expect(find.text('متبقٍ 1250 كيلوكالوري'), findsOneWidget);
     expect(find.text('55 / 130g'), findsOneWidget);
     expect(find.text('تخصيصك يتطور مع تفاعلك'), findsOneWidget);
+    await _scrollDashboardUntilVisible(tester, find.text('توصية وجبة'));
     expect(find.text('توصية وجبة'), findsOneWidget);
-    expect(find.text('خطة الأسبوع'), findsOneWidget);
+    await _scrollDashboardUntilVisible(tester, find.text('خطة الأسبوع'));
+    expect(find.text('خطة الأسبوع').first, findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
@@ -174,6 +187,7 @@ void main() {
     await tester.pumpWidget(_dashboardUnderTest(_progress(loggedMeals: 2)));
     await tester.pumpAndSettle();
 
+    await _scrollDashboardUntilVisible(tester, find.text('توصية وجبة'));
     await tester.tap(find.text('توصية وجبة'));
     await tester.pumpAndSettle();
 
@@ -186,12 +200,14 @@ void main() {
     await tester.pumpWidget(_dashboardUnderTest(_progress(loggedMeals: 2), router: router));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('خطة الأسبوع'));
+    await _scrollDashboardUntilVisible(tester, find.text('خطة الأسبوع'));
+    await tester.tap(find.text('خطة الأسبوع').first);
     await tester.pumpAndSettle();
     expect(find.text('ROUTE:/weekly'), findsOneWidget);
 
     router.go('/home');
     await tester.pumpAndSettle();
+    await _scrollDashboardUntilVisible(tester, find.text('بحث الأطعمة'));
     await tester.tap(find.text('بحث الأطعمة'));
     await tester.pumpAndSettle();
     expect(find.text('ROUTE:/foods'), findsOneWidget);
