@@ -1,4 +1,5 @@
 import 'package:dietary_app/core/api_client.dart';
+import 'package:flutter/material.dart';
 import 'package:dietary_app/main.dart' as app;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
