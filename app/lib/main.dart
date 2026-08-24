@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme.dart';
-import 'providers/providers.dart';
 
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
