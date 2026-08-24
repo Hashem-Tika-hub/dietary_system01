@@ -10,6 +10,8 @@
 # ============================================================
 
 import json
+from decimal import Decimal, ROUND_HALF_UP
+
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass, field, asdict
@@ -48,6 +50,12 @@ HEALTH_LIMITS = {
     "bp":        {"max_sodium_per_day": 1500, "label": "ضغط الدم"},
     "cholesterol": {"max_fat_pct": 0.25, "label": "الكوليسترول"},
 }
+
+
+def _round_nutrition(value: float, digits: int = 1) -> float:
+    """Round nutritional values deterministically using the conventional half-up rule."""
+    quantum = Decimal("1").scaleb(-digits)
+    return float(Decimal(str(value)).quantize(quantum, rounding=ROUND_HALF_UP))
 
 
 # ── كلاس الusers ─────────────────────────────────────────
@@ -132,9 +140,9 @@ class UserProfile:
         self.carbs_g   = (self.daily_calories * g["carbs"])   / 4
         self.fat_g     = (self.daily_calories * g["fat"])     / 9
 
-        # تقريب
-        for attr in ["bmi","bmr","tdee","daily_calories","protein_g","carbs_g","fat_g"]:
-            setattr(self, attr, round(getattr(self, attr), 1))
+        # تقريب موحّد وحتمي للقيم المعروضة وواجهات API.
+        for attr in ["bmi", "bmr", "tdee", "daily_calories", "protein_g", "carbs_g", "fat_g"]:
+            setattr(self, attr, _round_nutrition(getattr(self, attr), 1))
 
     def get_meal_targets(self) -> dict:
         """احسب أهداف كل وجبة"""
@@ -143,10 +151,10 @@ class UserProfile:
             r = info["ratio"]
             targets[meal] = {
                 "label":    info["label"],
-                "calories": round(self.daily_calories * r, 0),
-                "protein":  round(self.protein_g * r, 1),
-                "carbs":    round(self.carbs_g * r, 1),
-                "fat":      round(self.fat_g * r, 1),
+                "calories": _round_nutrition(self.daily_calories * r, 0),
+                "protein":  _round_nutrition(self.protein_g * r, 1),
+                "carbs":    _round_nutrition(self.carbs_g * r, 1),
+                "fat":      _round_nutrition(self.fat_g * r, 1),
             }
         return targets
 
