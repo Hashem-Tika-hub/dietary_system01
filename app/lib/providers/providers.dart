@@ -190,21 +190,21 @@ class WeeklyPlanNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>>
   }
 
   // استبدال صنف واحد داخل الخطة الحالية وتحديث الحالة محليًا فورًا
-  Future<bool> swapItem({
+  Future<Map<String, dynamic>?> swapItem({
     required String day, required String meal, required String slot,
     required String newFdcId,
   }) async {
     final current = state.value;
-    if (current == null) return false;
+    if (current == null) return null;
     try {
       final updated = await RecommendationService().swapMealItem(
         planId: current['id'], day: day, meal: meal, slot: slot,
         newFdcId: newFdcId,
       );
       state = AsyncValue.data(updated);
-      return true;
+      return updated;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 }

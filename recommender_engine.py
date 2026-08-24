@@ -191,10 +191,14 @@ def swap_meal_item(plan_data: dict, day: str, meal: str, slot: str,
     user = build_user(user_data)
     engine = get_engine()
 
-    foods_df = engine.cbf.foods_df
-    match = foods_df[foods_df["fdc_id"] == new_fdc_id]
+    # Select only from the same eligible candidate pool used by alternatives.
+    # This prevents a direct API request from bypassing allergy or hard filters.
+    eligible_candidates = engine._score_candidates(user, meal)
+    match = eligible_candidates[
+        eligible_candidates["fdc_id"].astype(str) == str(new_fdc_id)
+    ]
     if match.empty:
-        raise ValueError(f"food not found: {new_fdc_id}")
+        raise ValueError(f"food is not eligible for this meal: {new_fdc_id}")
     food = match.iloc[0]
 
     slot_info = _mr.get_slot_info(meal, slot)

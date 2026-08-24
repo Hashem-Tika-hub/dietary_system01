@@ -86,6 +86,7 @@ class _WeeklyPlanScreenState extends ConsumerState<WeeklyPlanScreen> {
         ),
         data: (data) {
           final plan   = data['plan'] as Map<String, dynamic>? ?? {};
+          final totals = data['totals'] as Map? ?? const {};
           final planId = data['id'] as int?;
           if (plan.isEmpty || planId == null) {
             return Center(child: Column(
@@ -107,8 +108,12 @@ class _WeeklyPlanScreenState extends ConsumerState<WeeklyPlanScreen> {
           }
           return ListView(
             padding: const EdgeInsets.all(16),
-            children: plan.entries.map((e) =>
-                _DayCard(day: e.key, meals: e.value as Map, planId: planId)).toList(),
+            children: plan.entries.map((e) => _DayCard(
+                  day: e.key,
+                  meals: e.value as Map,
+                  dayTotals: totals[e.key] as Map? ?? const {},
+                  planId: planId,
+                )).toList(),
           );
         },
       ),
@@ -119,8 +124,14 @@ class _WeeklyPlanScreenState extends ConsumerState<WeeklyPlanScreen> {
 class _DayCard extends StatefulWidget {
   final String day;
   final Map meals;
+  final Map dayTotals;
   final int planId;
-  const _DayCard({required this.day, required this.meals, required this.planId});
+  const _DayCard({
+    required this.day,
+    required this.meals,
+    required this.dayTotals,
+    required this.planId,
+  });
 
   @override
   State<_DayCard> createState() => _DayCardState();
@@ -128,26 +139,42 @@ class _DayCard extends StatefulWidget {
 
 class _DayCardState extends State<_DayCard> {
   @override
-  Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: ExpansionTile(
-          initiallyExpanded: widget.day == 'الأحد',
-          title: Row(children: [
-            const Icon(Icons.today_outlined,
-                color: AppColors.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(widget.day,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          ]),
-          children: (widget.meals.entries.toList()).map((e) {
-            final mealKey  = e.key as String;
-            final foods    = e.value as List? ?? [];
-            return _MealSection(
-                day: widget.day, mealKey: mealKey, foods: foods,
-                planId: widget.planId);
-          }).toList(),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final calories = (widget.dayTotals['calories'] as num?)?.toDouble() ?? 0;
+    final planned = (widget.dayTotals['planned_calories'] as num?)?.toDouble() ?? 0;
+    final delta = (widget.dayTotals['calorie_delta'] as num?)?.toDouble() ?? 0;
+    final deltaLabel = delta > 0 ? '+${delta.toStringAsFixed(0)}' : delta.toStringAsFixed(0);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ExpansionTile(
+        initiallyExpanded: widget.day == 'الأحد',
+        title: Row(children: [
+          const Icon(Icons.today_outlined, color: AppColors.primary, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(widget.day, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          if (widget.dayTotals.isNotEmpty)
+            Text(
+              '${calories.toStringAsFixed(0)} / ${planned.toStringAsFixed(0)} ك · $deltaLabel',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: delta.abs() <= 25 ? AppColors.secondary : AppColors.textGrey,
+              ),
+            ),
+        ]),
+        children: (widget.meals.entries.toList()).map((e) {
+          final mealKey  = e.key as String;
+          final foods    = e.value as List? ?? [];
+          return _MealSection(
+              day: widget.day, mealKey: mealKey, foods: foods,
+              planId: widget.planId);
+        }).toList(),
+      ),
+    );
+  }
 }
 
 class _MealSection extends ConsumerWidget {
@@ -285,16 +312,27 @@ class _SwapSheetState extends ConsumerState<_SwapSheet> {
 
   Future<void> _pick(FoodRecommendation alt) async {
     setState(() => _swapping = true);
-    final ok = await ref.read(weeklyPlanProvider.notifier).swapItem(
+    final updated = await ref.read(weeklyPlanProvider.notifier).swapItem(
       day: widget.day, meal: widget.meal, slot: widget.slot,
       newFdcId: alt.fdcId,
     );
-    if (mounted) {
-      Navigator.pop(context);
-      if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تعذّر تنفيذ الاستبدال، حاول مرة أخرى')));
-      }
+    if (!mounted) return;
+
+    Navigator.pop(context);
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر تنفيذ الاستبدال، حاول مرة أخرى')),
+      );
+      return;
+    }
+
+    final summary = updated['change_summary'] as Map?;
+    final delta = (summary?['meal_calories_delta'] as num?)?.toDouble();
+    if (delta != null) {
+      final signed = delta > 0 ? '+${delta.toStringAsFixed(0)}' : delta.toStringAsFixed(0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم الاستبدال. فرق سعرات الوجبة: $signed كيلوكالوري')),
+      );
     }
   }
 

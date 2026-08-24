@@ -219,12 +219,47 @@ class MealRecommendationResponse(BaseModel):
     collaborative_weight: float = 0.0
 
 
+class WeeklyMealTotals(BaseModel):
+    target_calories: float = 0.0
+    calories: float = 0.0
+    protein_g: float = 0.0
+    carbs_g: float = 0.0
+    fat_g: float = 0.0
+    calorie_delta: float = 0.0
+    missing_required_slots: int = 0
+
+
+class WeeklyDayTotals(BaseModel):
+    planned_calories: float = 0.0
+    calories: float = 0.0
+    protein_g: float = 0.0
+    carbs_g: float = 0.0
+    fat_g: float = 0.0
+    calorie_delta: float = 0.0
+    completion_ratio: float = 0.0
+    missing_required_slots: int = 0
+    meals: Dict[str, WeeklyMealTotals] = Field(default_factory=dict)
+
+
+class WeeklyPlanChangeSummary(BaseModel):
+    day: str
+    meal: str
+    slot: str
+    meal_calories_delta: float = 0.0
+    day_calories_delta: float = 0.0
+    protein_delta_g: float = 0.0
+    carbs_delta_g: float = 0.0
+    fat_delta_g: float = 0.0
+
+
 class WeeklyPlanResponse(BaseModel):
-    """الخطة الأسبوعية"""
+    """الخطة الأسبوعية ومجاميعها التخطيطية المشتقة من عناصرها."""
     id:      int
     plan:    Dict[str, Any]
     user_id: int
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    totals: Dict[str, WeeklyDayTotals] = Field(default_factory=dict)
+    change_summary: Optional[WeeklyPlanChangeSummary] = None
 
 
 class SwapAlternativesRequest(BaseModel):
