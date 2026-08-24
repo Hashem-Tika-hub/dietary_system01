@@ -163,11 +163,11 @@ void main() {
     expect(find.text('متبقٍ 1250 كيلوكالوري'), findsOneWidget);
     expect(find.text('55 / 130g'), findsOneWidget);
     expect(find.text('تخصيصك يتطور مع تفاعلك'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
     await _scrollDashboardUntilVisible(tester, find.text('توصية وجبة'));
     expect(find.text('توصية وجبة'), findsOneWidget);
     await _scrollDashboardUntilVisible(tester, find.text('خطة الأسبوع'));
     expect(find.text('خطة الأسبوع').first, findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
   testWidgets('Dashboard truthfully renders the empty daily-log state',
