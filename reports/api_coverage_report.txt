@@ -1,0 +1,45 @@
+Name                                                Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------------
+05_user_profiler.py                                   156     78    50%   127, 163-169, 173, 184-187, 190-230, 233, 252-288, 293-318
+07_cbf_model.py                                       145    117    19%   23-28, 60-63, 67-84, 93-111, 130-188, 191-200, 204-213, 220-248, 254-317
+08_cf_model.py                                        162    134    17%   24-29, 53-59, 68-80, 87-96, 106-122, 139-169, 172-183, 187-198, 216-249, 254-267, 272-322
+09_hybrid_recommender.py                              210    159    24%   78-95, 118, 175-270, 288-307, 311-320, 329-357, 361-376, 380-440, 445-501
+api/__init__.py                                         0      0   100%
+api/auth.py                                            29      8    72%   19, 31-33, 38-44
+api/database.py                                        25      5    80%   68, 78-82
+api/db_models.py                                      172      0   100%
+api/dependencies.py                                    19      2    89%   35, 39
+api/limiter.py                                          3      0   100%
+api/main.py                                            61     27    56%   35-59, 154, 165-171
+api/routes/__init__.py                                  0      0   100%
+api/routes/auth.py                                     31     14    55%   33-64, 74-83, 89
+api/routes/foods.py                                    43     30    30%   23-30, 54-90, 96-104
+api/routes/recommendations.py                         124     42    66%   208-210, 225-239, 251-258, 269-286, 300, 327-331, 340-345
+api/routes/users.py                                   116     11    91%   57, 97-117, 128-132, 146, 148, 328, 364
+api/schemas.py                                        261      3    99%   26, 30, 77
+api/services/__init__.py                                0      0   100%
+api/services/feedback_collaborative_filter.py          82      4    95%   58, 102, 104, 150
+api/services/recommendation_policy.py                  93     14    85%   80, 97, 120, 128, 150, 152, 156, 160, 186, 188, 193, 222, 224, 228
+api/services/weekly_plan_totals.py                     45      3    93%   24-25, 40
+api/tests/conftest.py                                   8      1    88%   15
+api/tests/test_api_security_edge_cases.py              72      0   100%
+api/tests/test_calorie_and_allergy_safety.py           42      0   100%
+api/tests/test_database_migrations.py                  58      1    98%   129
+api/tests/test_feedback_collaborative_filter.py        62      0   100%
+api/tests/test_food_catalog_migrations.py              81      0   100%
+api/tests/test_food_diversity_policy.py                27      0   100%
+api/tests/test_food_feedback_api.py                    66      0   100%
+api/tests/test_hybrid_recommender_policy.py            42      0   100%
+api/tests/test_meal_rules.py                           27      0   100%
+api/tests/test_openapi_docs.py                         12      0   100%
+api/tests/test_recommendation_api.py                  106      0   100%
+api/tests/test_recommendation_feedback_context.py      30      0   100%
+api/tests/test_recommendation_policy.py                30      0   100%
+api/tests/test_user_meal_log_api.py                    95      0   100%
+api/tests/test_weekly_plan_swap_totals_api.py          55      0   100%
+api/tests/test_weekly_plan_totals.py                   36      0   100%
+config.py                                              26     10    62%   69-78
+meal_rules.py                                          83     21    75%   150-154, 177, 215, 217, 219, 230-245
+recommender_engine.py                                 100     62    38%   47-49, 87-95, 114-116, 125-128, 137-184, 191-246
+---------------------------------------------------------------------------------
+TOTAL                                                2835    746    74%
