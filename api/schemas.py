@@ -205,7 +205,14 @@ class FoodRecommendation(BaseModel):
 class MealRecommendationResponse(BaseModel):
     meal:          str
     meal_label:    str
+    # الهدف المستخدم فعليًا لتحديد الحصص وترتيب التوصية بعد ميزانية اليوم.
     target_calories: float
+    # الهدف المخطط للوجبة قبل خصم ما سُجل خلال اليوم.
+    planned_target_calories: float = 0.0
+    consumed_today_calories: float = 0.0
+    remaining_daily_calories: float = 0.0
+    budget_adjusted: bool = False
+    daily_budget_exhausted: bool = False
     recommendations: List[FoodRecommendation]
     ranking_basis: str = "content_based"
     content_weight: float = 1.0

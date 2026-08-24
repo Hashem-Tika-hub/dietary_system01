@@ -110,11 +110,14 @@ class ContentBasedFilter:
         weights  = weights / weights.sum()
         return norm * weights
 
-    def recommend(self,
-                  user: "UserProfile",
-                  meal: str = "lunch",
-                  top_k: int = 10,
-                  exclude_ids: list = None) -> pd.DataFrame:
+    def recommend(
+        self,
+        user: "UserProfile",
+        meal: str = "lunch",
+        top_k: int = 10,
+        exclude_ids: list = None,
+        meal_target_calories: float | None = None,
+    ) -> pd.DataFrame:
         """
         اقتراح أطعمة لوجبة معيّنة
 
@@ -127,7 +130,19 @@ class ContentBasedFilter:
         assert self.is_fitted, "النموذج غير مدرَّب! استدعِ fit() أولاً"
 
         meal_targets = user.get_meal_targets()
-        target_vec   = self._build_target_vector(meal_targets, meal)
+        if meal_target_calories is not None:
+            meal_targets = {key: dict(value) for key, value in meal_targets.items()}
+            planned_calories = float(meal_targets[meal]["calories"])
+            effective_calories = max(0.0, float(meal_target_calories))
+            scale = (effective_calories / planned_calories) if planned_calories > 0 else 0.0
+            meal_targets[meal] = {
+                **meal_targets[meal],
+                "calories": effective_calories,
+                "protein": float(meal_targets[meal]["protein"]) * scale,
+                "carbs": float(meal_targets[meal]["carbs"]) * scale,
+                "fat": float(meal_targets[meal]["fat"]) * scale,
+            }
+        target_vec = self._build_target_vector(meal_targets, meal)
 
         # احسب التشابه مع كل الأطعمة
         sims = cosine_similarity(

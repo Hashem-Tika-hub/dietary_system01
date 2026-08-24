@@ -113,26 +113,104 @@ class _MealRecommendationView extends ConsumerWidget {
             ],
           ),
         ),
+        if (data.budgetAdjusted) ...[
+          const SizedBox(height: 12),
+          _DailyBudgetNotice(data: data),
+        ],
         const SizedBox(height: 12),
         _RankingBasisCard(data: data),
         const SizedBox(height: 12),
         _CollaborativeReadinessCard(readiness: readiness),
         const SizedBox(height: 16),
-        Text(
-          '${data.recommendations.length} اقتراحات لك',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 12),
-        ...data.recommendations.asMap().entries.map(
-              (entry) => _FoodCard(
-                food: entry.value,
-                rank: entry.key + 1,
-                mealType: data.meal,
+        if (data.dailyBudgetExhausted)
+          const _DailyBudgetExhaustedState()
+        else ...[
+          Text(
+            '${data.recommendations.length} اقتراحات لك',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          ...data.recommendations.asMap().entries.map(
+                (entry) => _FoodCard(
+                  food: entry.value,
+                  rank: entry.key + 1,
+                  mealType: data.meal,
+                ),
               ),
-            ),
+        ],
       ],
     );
   }
+}
+
+class _DailyBudgetNotice extends StatelessWidget {
+  final MealRecommendation data;
+  const _DailyBudgetNotice({required this.data});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.accent.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.accent.withOpacity(0.25)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.auto_awesome_outlined, color: AppColors.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'التوصية تراعي المتبقي اليومي',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    data.dailyBudgetExhausted
+                        ? 'لا يوجد متبقٍ مسجل اليوم. راجع سجل وجباتك قبل إضافة وجبة جديدة.'
+                        : 'المتبقي اليوم ${data.remainingDailyCalories.toStringAsFixed(0)} كيلوكالوري؛ خُفّض هدف هذه الوجبة من ${data.plannedTargetCalories.toStringAsFixed(0)} إلى ${data.targetCalories.toStringAsFixed(0)} كيلوكالوري.',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _DailyBudgetExhaustedState extends StatelessWidget {
+  const _DailyBudgetExhaustedState();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.fact_check_outlined, size: 36, color: AppColors.primary),
+            SizedBox(height: 10),
+            Text(
+              'تم الوصول إلى هدف اليوم المسجل',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'لا نعرض حصة إضافية الآن. يمكنك مراجعة سجل الوجبات أو الرجوع لاحقًا.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+            ),
+          ],
+        ),
+      );
 }
 
 class _RankingBasisCard extends StatelessWidget {
