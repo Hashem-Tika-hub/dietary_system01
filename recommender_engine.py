@@ -99,7 +99,12 @@ def get_ranking_metadata(user_data: dict) -> dict:
     }
 
 
-def recommend_meal(user_data: dict, meal: str, top_k: int = 5) -> list:
+def recommend_meal(
+    user_data: dict,
+    meal: str,
+    top_k: int = 5,
+    meal_target_calories: float | None = None,
+) -> list:
     """
     توصيات وجبة واحدة — يرجع "طبق" (list من dicts)، صنف واحد لكل خانة
     (بروتين/نشويات/خضار...) بدل قائمة top_k مسطّحة. top_k محفوظ في
@@ -108,7 +113,11 @@ def recommend_meal(user_data: dict, meal: str, top_k: int = 5) -> list:
     """
     user = build_user(user_data)
     engine = get_engine()
-    return engine.recommend_meal(user, meal=meal)
+    return engine.recommend_meal(
+        user,
+        meal=meal,
+        meal_target_calories=meal_target_calories,
+    )
 
 
 def generate_weekly_plan(user_data: dict) -> dict:

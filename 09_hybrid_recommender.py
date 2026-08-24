@@ -94,8 +94,13 @@ class HybridRecommender:
         print(f"  ✓ K-Means food diversity ready: {len(self.food_cluster_by_id)} foods")
         print("  ✓ Explicit-feedback CF will activate when data is ready")
 
-    def _score_candidates(self, user, meal: str,
-                           exclude_ids: list = None) -> pd.DataFrame:
+    def _score_candidates(
+        self,
+        user,
+        meal: str,
+        exclude_ids: list = None,
+        meal_target_calories: float | None = None,
+    ) -> pd.DataFrame:
         """
         يُرجع كل الأطعمة المؤهلة للوجبة (بعد الفلترة الصارمة في CBF/CF)
         مع درجة هجينة، بدون قصّها بعد — القصّ يحدث لاحقًا لكل خانة
@@ -103,7 +108,11 @@ class HybridRecommender:
         """
         pool = 500  # أكبر من عدد الأطعمة أصلاً => يرجع كل المؤهل بعد الفلترة
         cbf_recs = self.cbf.recommend(
-            user, meal=meal, top_k=pool, exclude_ids=exclude_ids
+            user,
+            meal=meal,
+            top_k=pool,
+            exclude_ids=exclude_ids,
+            meal_target_calories=meal_target_calories,
         ).rename(columns={"cbf_score": "raw_cbf"})
         if cbf_recs.empty:
             return cbf_recs.assign(hybrid_score=pd.Series(dtype=float))
@@ -146,11 +155,14 @@ class HybridRecommender:
         )
         return blend_candidate_scores(merged, weights=weights)
 
-    def recommend_meal(self,
-                       user,
-                       meal: str,
-                       exclude_ids: list = None,
-                       recent_clusters_by_group: dict | None = None) -> list:
+    def recommend_meal(
+        self,
+        user,
+        meal: str,
+        exclude_ids: list = None,
+        recent_clusters_by_group: dict | None = None,
+        meal_target_calories: float | None = None,
+    ) -> list:
         """
         يبني "طبق" الوجبة حسب قالب Exchange Lists / USDA MyPlate بدل قائمة
         مسطحة: كل خانة (بروتين/نشويات/خضار...) تاخذ حصتها من هدف سعرات
@@ -163,13 +175,25 @@ class HybridRecommender:
         assert self.is_ready, "استدعِ load_models() أولاً"
 
         meal_targets = user.get_meal_targets()
-        cal_target = meal_targets[meal]["calories"]
+        planned_cal_target = meal_targets[meal]["calories"]
+        cal_target = (
+            float(meal_target_calories)
+            if meal_target_calories is not None
+            else planned_cal_target
+        )
+        if cal_target <= 0:
+            return []
         template = meal_rules.PLATE_TEMPLATES.get(
             meal, meal_rules.PLATE_TEMPLATES["snack"]
         )
 
         exclude_ids = list(exclude_ids or [])
-        candidates = self._score_candidates(user, meal, exclude_ids=exclude_ids)
+        candidates = self._score_candidates(
+            user,
+            meal,
+            exclude_ids=exclude_ids,
+            meal_target_calories=cal_target,
+        )
         candidates = candidates.copy()
         candidates["food_cluster"] = candidates["fdc_id"].map(self.food_cluster_by_id)
         recent_clusters_by_group = recent_clusters_by_group if recent_clusters_by_group is not None else {}

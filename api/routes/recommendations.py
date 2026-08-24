@@ -6,15 +6,16 @@
 # ============================================================
 
 import logging
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.database     import get_db
-from api.db_models    import User, Food, UserFoodFeedback, WeeklyPlan
+from api.db_models    import MealLog, User, Food, UserFoodFeedback, WeeklyPlan
 from api.services.feedback_collaborative_filter import (
     ExplicitFeedbackCollaborativeFilter,
     FeedbackRecord,
@@ -91,6 +92,22 @@ def _user_dict(user: User, db: Session | None = None) -> dict:
     }
 
 
+def _today_calories_consumed(db: Session, user_id: int) -> float:
+    """Return logged calories for the current calendar day, not preference data."""
+    day_start = datetime.combine(datetime.now().date(), time.min)
+    next_day_start = day_start + timedelta(days=1)
+    return float(
+        db.query(func.coalesce(func.sum(MealLog.calories), 0.0))
+        .filter(
+            MealLog.user_id == user_id,
+            MealLog.date >= day_start,
+            MealLog.date < next_day_start,
+        )
+        .scalar()
+        or 0.0
+    )
+
+
 @router.post("/meal", response_model=MealRecommendationResponse,
              summary="Get meal recommendations")
 def recommend_meal(
@@ -108,10 +125,34 @@ def recommend_meal(
     """
     try:
         user_data = _user_dict(user, db)
-        items = engine.recommend_meal(user_data, req.meal, req.top_k)
         targets = engine.get_user_targets(user_data)
         ranking = engine.get_ranking_metadata(user_data)
-        meal_cal = targets["meal_targets"][req.meal]["calories"]
+
+        planned_meal_calories = float(targets["meal_targets"][req.meal]["calories"])
+        daily_target_calories = float(targets["daily_calories"])
+        consumed_today_calories = _today_calories_consumed(db, user.id)
+        remaining_daily_calories = max(
+            0.0,
+            daily_target_calories - consumed_today_calories,
+        )
+        effective_meal_calories = min(
+            planned_meal_calories,
+            remaining_daily_calories,
+        )
+        daily_budget_exhausted = remaining_daily_calories <= 0.0
+
+        # MealLog changes the nutritional budget only. It never adds a
+        # preference signal and does not change CF readiness or its weights.
+        items = (
+            []
+            if daily_budget_exhausted
+            else engine.recommend_meal(
+                user_data,
+                req.meal,
+                req.top_k,
+                meal_target_calories=effective_meal_calories,
+            )
+        )
 
         recs = [FoodRecommendation(
             fdc_id       = str(r.get("fdc_id", "")),
@@ -134,7 +175,12 @@ def recommend_meal(
         return MealRecommendationResponse(
             meal            = req.meal,
             meal_label      = MEAL_LABELS.get(req.meal, req.meal),
-            target_calories = meal_cal,
+            target_calories = effective_meal_calories,
+            planned_target_calories = planned_meal_calories,
+            consumed_today_calories = consumed_today_calories,
+            remaining_daily_calories = remaining_daily_calories,
+            budget_adjusted = effective_meal_calories < planned_meal_calories,
+            daily_budget_exhausted = daily_budget_exhausted,
             recommendations = recs,
             **ranking,
         )

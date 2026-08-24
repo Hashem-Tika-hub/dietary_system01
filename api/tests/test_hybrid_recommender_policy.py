@@ -24,8 +24,17 @@ class StubModel:
     def __init__(self, scores: dict[str, float], score_column: str):
         self.scores = scores
         self.score_column = score_column
+        self.last_meal_target_calories = None
 
-    def recommend(self, user, meal: str, top_k: int, exclude_ids=None):
+    def recommend(
+        self,
+        user,
+        meal: str,
+        top_k: int,
+        exclude_ids=None,
+        meal_target_calories=None,
+    ):
+        self.last_meal_target_calories = meal_target_calories
         rows = []
         for index, (food_id, score) in enumerate(self.scores.items()):
             rows.append(
@@ -83,6 +92,18 @@ def test_hybrid_recommender_defaults_to_content_ranking_without_feedback() -> No
     )
 
     assert ranked.iloc[0]["fdc_id"] == "content-first"
+
+
+def test_hybrid_recommender_forwards_remaining_budget_to_content_ranking() -> None:
+    recommender = build_hybrid()
+
+    recommender._score_candidates(
+        StubUser(interaction_count=0, collaborative_signals_ready=False),
+        "lunch",
+        meal_target_calories=275.0,
+    )
+
+    assert recommender.cbf.last_meal_target_calories == 275.0
 
 
 def test_hybrid_recommender_uses_cf_only_after_feedback_is_declared_ready() -> None:

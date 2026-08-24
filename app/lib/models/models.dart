@@ -318,6 +318,11 @@ class MealRecommendation {
   final String rankingBasis;
   final double contentWeight;
   final double collaborativeWeight;
+  final double plannedTargetCalories;
+  final double consumedTodayCalories;
+  final double remainingDailyCalories;
+  final bool budgetAdjusted;
+  final bool dailyBudgetExhausted;
 
   const MealRecommendation({
     required this.meal,
@@ -327,6 +332,11 @@ class MealRecommendation {
     this.rankingBasis = 'content_based',
     this.contentWeight = 1.0,
     this.collaborativeWeight = 0.0,
+    this.plannedTargetCalories = 0.0,
+    this.consumedTodayCalories = 0.0,
+    this.remainingDailyCalories = 0.0,
+    this.budgetAdjusted = false,
+    this.dailyBudgetExhausted = false,
   });
 
   factory MealRecommendation.fromJson(Map<String, dynamic> j) =>
@@ -340,6 +350,11 @@ class MealRecommendation {
         rankingBasis: j['ranking_basis'] ?? 'content_based',
         contentWeight: (j['content_weight'] ?? 1).toDouble(),
         collaborativeWeight: (j['collaborative_weight'] ?? 0).toDouble(),
+        plannedTargetCalories: (j['planned_target_calories'] ?? 0).toDouble(),
+        consumedTodayCalories: (j['consumed_today_calories'] ?? 0).toDouble(),
+        remainingDailyCalories: (j['remaining_daily_calories'] ?? 0).toDouble(),
+        budgetAdjusted: j['budget_adjusted'] ?? false,
+        dailyBudgetExhausted: j['daily_budget_exhausted'] ?? false,
       );
 }
 
