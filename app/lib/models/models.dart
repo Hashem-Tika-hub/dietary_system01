@@ -341,6 +341,7 @@ class MealRecommendation {
         contentWeight: (j['content_weight'] ?? 1).toDouble(),
         collaborativeWeight: (j['collaborative_weight'] ?? 0).toDouble(),
       );
+}
 
 class CollaborativeReadiness {
   final bool ready;
@@ -368,5 +369,4 @@ class CollaborativeReadiness {
         uniqueFoods: j['unique_foods'] ?? 0,
         targetUserInteractions: j['target_user_interactions'] ?? 0,
       );
-}
 }

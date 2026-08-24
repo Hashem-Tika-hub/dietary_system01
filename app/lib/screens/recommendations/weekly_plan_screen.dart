@@ -186,7 +186,6 @@ class _MealSection extends ConsumerWidget {
               final name = f['name'] ?? '';
               final cal  = (f['calories'] ?? 0).toStringAsFixed(0);
               final g    = (f['portion_g'] ?? 0).toStringAsFixed(0);
-              final slot = f['slot'] ?? '';
               final reason = f['recommendation_reason']?.toString() ?? '';
               final diversityApplied = f['diversity_applied'] == true;
               return InkWell(

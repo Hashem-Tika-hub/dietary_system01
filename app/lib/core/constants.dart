@@ -2,8 +2,6 @@
 // ── Colors, API URL, and app-wide constants ──────────────
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 
 class AppColors {
   // Brand palette
