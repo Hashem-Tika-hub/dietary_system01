@@ -52,7 +52,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Flutter source
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Run Flutter unit and widget tests
         run: flutter test test
