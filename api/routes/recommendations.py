@@ -20,6 +20,7 @@ from api.services.feedback_collaborative_filter import (
     ExplicitFeedbackCollaborativeFilter,
     FeedbackRecord,
 )
+from api.services.weekly_plan_totals import build_change_summary, summarize_week
 from api.schemas      import (MealRequest, MealRecommendationResponse,
                                FoodRecommendation, WeeklyPlanResponse,
                                SwapAlternativesRequest, SwapRequest)
@@ -90,6 +91,25 @@ def _user_dict(user: User, db: Session | None = None) -> dict:
         "collaborative_signals_ready": collaborative_signals_ready,
         "explicit_collaborative_scores": explicit_collaborative_scores,
     }
+
+
+def _weekly_plan_response(
+    plan_row: WeeklyPlan,
+    user: User,
+    db: Session,
+    *,
+    change_summary: dict | None = None,
+) -> WeeklyPlanResponse:
+    targets = engine.get_user_targets(_user_dict(user, db))
+    totals = summarize_week(plan_row.plan_data, targets)
+    return WeeklyPlanResponse(
+        id=plan_row.id,
+        plan=plan_row.plan_data,
+        user_id=user.id,
+        created_at=plan_row.created_at,
+        totals=totals,
+        change_summary=change_summary,
+    )
 
 
 def _today_calories_consumed(db: Session, user_id: int) -> float:
@@ -207,15 +227,13 @@ def get_current_weekly(
                   .order_by(WeeklyPlan.created_at.desc())
                   .first())
     if existing:
-        return WeeklyPlanResponse(id=existing.id, plan=existing.plan_data,
-                                   user_id=user.id, created_at=existing.created_at)
+        return _weekly_plan_response(existing, user, db)
 
     try:
         plan = engine.generate_weekly_plan(_user_dict(user, db))
         record = WeeklyPlan(user_id=user.id, plan_data=plan)
         db.add(record); db.commit(); db.refresh(record)
-        return WeeklyPlanResponse(id=record.id, plan=plan, user_id=user.id,
-                                   created_at=record.created_at)
+        return _weekly_plan_response(record, user, db)
     except Exception as e:
         logger.exception("Weekly plan generation error")
         raise HTTPException(status_code=500,
@@ -234,8 +252,7 @@ def regenerate_weekly(
         plan = engine.generate_weekly_plan(_user_dict(user, db))
         record = WeeklyPlan(user_id=user.id, plan_data=plan)
         db.add(record); db.commit(); db.refresh(record)
-        return WeeklyPlanResponse(id=record.id, plan=plan, user_id=user.id,
-                                   created_at=record.created_at)
+        return _weekly_plan_response(record, user, db)
     except Exception as e:
         logger.exception("Weekly plan generation error")
         raise HTTPException(status_code=500,
@@ -283,15 +300,30 @@ def weekly_swap(
         raise HTTPException(status_code=404, detail="Plan not found")
 
     try:
+        user_data = _user_dict(user, db)
+        targets = engine.get_user_targets(user_data)
+        before_totals = summarize_week(plan_row.plan_data, targets)
         updated = engine.swap_meal_item(
             dict(plan_row.plan_data), req.day, req.meal, req.slot,
-            req.new_fdc_id, _user_dict(user, db)
+            req.new_fdc_id, user_data
+        )
+        after_totals = summarize_week(updated, targets)
+        change_summary = build_change_summary(
+            day=req.day,
+            meal=req.meal,
+            slot=req.slot,
+            before_totals=before_totals,
+            after_totals=after_totals,
         )
         plan_row.plan_data = updated
         flag_modified(plan_row, "plan_data")  # عمود JSON — SQLAlchemy لا يتتبّع التعديل داخل نفس الكائن تلقائيًا
         db.commit(); db.refresh(plan_row)
-        return WeeklyPlanResponse(id=plan_row.id, plan=plan_row.plan_data,
-                                   user_id=user.id, created_at=plan_row.created_at)
+        return _weekly_plan_response(
+            plan_row,
+            user,
+            db,
+            change_summary=change_summary,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
