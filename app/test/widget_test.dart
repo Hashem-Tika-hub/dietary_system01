@@ -146,6 +146,8 @@ Future<void> _scrollDashboardUntilVisible(
     240,
     scrollable: find.byType(Scrollable).first,
   );
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
 }
 
 void main() {
