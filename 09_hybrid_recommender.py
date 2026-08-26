@@ -100,6 +100,7 @@ class HybridRecommender:
         meal: str,
         exclude_ids: list = None,
         meal_target_calories: float | None = None,
+        eligible_fdc_ids: set[str] | None = None,
     ) -> pd.DataFrame:
         """
         يُرجع كل الأطعمة المؤهلة للوجبة (بعد الفلترة الصارمة في CBF/CF)
@@ -107,13 +108,19 @@ class HybridRecommender:
         من خانات الطبق على حدة.
         """
         pool = 500  # أكبر من عدد الأطعمة أصلاً => يرجع كل المؤهل بعد الفلترة
-        cbf_recs = self.cbf.recommend(
-            user,
-            meal=meal,
-            top_k=pool,
-            exclude_ids=exclude_ids,
-            meal_target_calories=meal_target_calories,
-        ).rename(columns={"cbf_score": "raw_cbf"})
+        cbf_kwargs = {
+            "meal": meal,
+            "top_k": pool,
+            "exclude_ids": exclude_ids,
+            "meal_target_calories": meal_target_calories,
+        }
+        # Keep legacy/test content models compatible when no catalog-backed
+        # allergy decision is needed for the current user.
+        if eligible_fdc_ids is not None:
+            cbf_kwargs["eligible_fdc_ids"] = eligible_fdc_ids
+        cbf_recs = self.cbf.recommend(user, **cbf_kwargs).rename(
+            columns={"cbf_score": "raw_cbf"}
+        )
         if cbf_recs.empty:
             return cbf_recs.assign(hybrid_score=pd.Series(dtype=float))
         cbf_recs["fdc_id"] = cbf_recs["fdc_id"].astype(str)
@@ -162,6 +169,7 @@ class HybridRecommender:
         exclude_ids: list = None,
         recent_clusters_by_group: dict | None = None,
         meal_target_calories: float | None = None,
+        eligible_fdc_ids: set[str] | None = None,
     ) -> list:
         """
         يبني "طبق" الوجبة حسب قالب Exchange Lists / USDA MyPlate بدل قائمة
@@ -193,6 +201,7 @@ class HybridRecommender:
             meal,
             exclude_ids=exclude_ids,
             meal_target_calories=cal_target,
+            eligible_fdc_ids=eligible_fdc_ids,
         )
         candidates = candidates.copy()
         candidates["food_cluster"] = candidates["fdc_id"].map(self.food_cluster_by_id)
@@ -269,9 +278,12 @@ class HybridRecommender:
 
         return plate
 
-    def generate_weekly_plan(self,
-                              user,
-                              days: int = 7) -> dict:
+    def generate_weekly_plan(
+        self,
+        user,
+        days: int = 7,
+        eligible_fdc_ids: set[str] | None = None,
+    ) -> dict:
         """
         Generating خطة غذائية أسبوعية كاملة باستخدام قوالب الطبق.
 
@@ -298,6 +310,7 @@ class HybridRecommender:
                     user, meal=meal,
                     exclude_ids=used_ids[-25:] if used_ids else None,
                     recent_clusters_by_group=recent_clusters_by_group,
+                    eligible_fdc_ids=eligible_fdc_ids,
                 )
                 for item in plate:
                     if item.get("fdc_id") is not None:   # تجاوز خانات "missing"

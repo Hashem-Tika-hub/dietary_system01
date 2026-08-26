@@ -117,6 +117,7 @@ class ContentBasedFilter:
         top_k: int = 10,
         exclude_ids: list = None,
         meal_target_calories: float | None = None,
+        eligible_fdc_ids: set[str] | None = None,
     ) -> pd.DataFrame:
         """
         اقتراح أطعمة لوجبة معيّنة
@@ -144,18 +145,24 @@ class ContentBasedFilter:
             }
         target_vec = self._build_target_vector(meal_targets, meal)
 
-        # احسب التشابه مع كل الأطعمة
-        sims = cosine_similarity(
-            target_vec.reshape(1, -1), self.food_matrix
-        )[0]
-
+        # ── فلترة صارمة قبل احتساب التشابه أو أي ترتيب ─────────────────
+        # ``eligible_fdc_ids`` يأتي من دليل الحساسية الموثق في الكتالوج.
+        # لا يسمح لأي score لاحق بإعادة إدخال عنصر محجوب أو مجهول البيانات.
         df = self.foods_df.copy()
-        df["cbf_score"] = sims
-
-        # ── فلترة صارمة: نوع الوجبة + الحساسية + عدم الرغبة + القيود الصحية ──
-        # (هذا يستبدل الفلتر القديم الذي كان يتجاهل allergies/dislikes تمامًا
-        #  ولا يمنع ظهور صنف غير مناسب للوجبة أصلاً)
+        df["_matrix_index"] = np.arange(len(df))
+        if eligible_fdc_ids is not None:
+            eligible_ids = {str(value) for value in eligible_fdc_ids}
+            df = df[df["fdc_id"].astype(str).isin(eligible_ids)]
         df = meal_rules.apply_hard_filters(df, user, meal=meal)
+        if df.empty:
+            return df.drop(columns=["_matrix_index"], errors="ignore")
+
+        sims = cosine_similarity(
+            target_vec.reshape(1, -1), self.food_matrix[df["_matrix_index"].to_numpy()]
+        )[0]
+        df = df.copy()
+        df["cbf_score"] = sims
+        df = df.drop(columns=["_matrix_index"])
 
         # استبعاد ما سبق اقتراحه
         if exclude_ids:
