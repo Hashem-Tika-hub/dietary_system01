@@ -34,7 +34,7 @@ def check_packages():
         "pydantic":     "pydantic[email]",
         "multipart":    "python-multipart",
     }
-    print("\n[1/4] Checking packages...")
+    print("\n[1/5] Checking packages...")
     missing = []
     for module, install_name in required.items():
         try:
@@ -55,7 +55,7 @@ def check_packages():
 #  STEP 2 — Apply database migrations
 # ════════════════════════════════════════════════════════════
 def apply_migrations():
-    print("\n[2/4] Applying database migrations...")
+    print("\n[2/5] Applying database migrations...")
 
     subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
@@ -68,21 +68,45 @@ def apply_migrations():
     db_file = DATABASE_URL.replace("sqlite:///", "")
     print(f"  ✓  Database : {db_file}")
     print(f"  ✓  Schema   : managed by Alembic")
-    print(f"  ✓  Tables   : users, meal_logs, weekly_plans")
+    print("  ✓  Tables   : users, meal_logs, weekly_plans, foods, food_nutrients, allergens")
 
-    # Show column names for each table
+    # Show column names for the core runtime tables.
     from sqlalchemy import inspect
     inspector = inspect(engine)
-    for table in ["users", "meal_logs", "weekly_plans"]:
+    for table in ["users", "meal_logs", "weekly_plans", "foods", "food_nutrients"]:
         cols = [c["name"] for c in inspector.get_columns(table)]
         print(f"       {table}: {', '.join(cols)}")
 
 
 # ════════════════════════════════════════════════════════════
-#  STEP 3 — Insert test record and query it back
+#  STEP 3 — Import the curated food catalog
+# ════════════════════════════════════════════════════════════
+def import_catalog():
+    print("\n[3/5] Importing curated food catalog...")
+    from api.database import SessionLocal
+    from api.services.catalog_import import import_food_catalog
+
+    db = SessionLocal()
+    try:
+        result = import_food_catalog(db, ROOT / "data" / "foods_clean.csv")
+        db.commit()
+        print(
+            "  ✓  Catalog imported — "
+            f"{result['imported_foods']} foods, {result['created_foods']} new rows"
+        )
+        print("  !  Allergen evidence remains unknown until reviewed catalog evidence is imported")
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+# ════════════════════════════════════════════════════════════
+#  STEP 4 — Insert test record and query it back
 # ════════════════════════════════════════════════════════════
 def test_crud():
-    print("\n[3/4] Testing database read/write...")
+    print("\n[4/5] Testing database read/write...")
 
     from api.database  import SessionLocal
     from api.db_models import User
@@ -145,10 +169,10 @@ def test_crud():
 
 
 # ════════════════════════════════════════════════════════════
-#  STEP 4 — Test JWT auth
+#  STEP 5 — Test JWT auth
 # ════════════════════════════════════════════════════════════
 def test_auth():
-    print("\n[4/4] Testing JWT authentication...")
+    print("\n[5/5] Testing JWT authentication...")
 
     from api.auth import hash_password, verify_password, create_token, decode_token
 
@@ -182,6 +206,7 @@ if __name__ == "__main__":
 
     check_packages()
     apply_migrations()
+    import_catalog()
     test_crud()
     test_auth()
 

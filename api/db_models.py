@@ -205,6 +205,10 @@ class Food(Base):
     meal_tags = Column(JSON, nullable=False, default=list)
     basis_grams = Column(Float, nullable=False, default=100.0)
     data_quality = Column(String(20), nullable=False, default="verified")
+    health_score = Column(Float, nullable=False, default=0.0)
+    diabetic_friendly = Column(Boolean, nullable=False, default=False)
+    low_sodium = Column(Boolean, nullable=False, default=False)
+    is_high_protein = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True, index=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(

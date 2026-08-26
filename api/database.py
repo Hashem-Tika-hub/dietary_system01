@@ -43,7 +43,17 @@ class DatabaseMigrationRequiredError(RuntimeError):
     """Raised when the configured database has not been prepared by Alembic."""
 
 
-REQUIRED_TABLES = frozenset({"users", "meal_logs", "weekly_plans"})
+REQUIRED_TABLES = frozenset({
+    "users",
+    "meal_logs",
+    "weekly_plans",
+    "catalog_sources",
+    "foods",
+    "food_nutrients",
+    "allergens",
+    "food_allergens",
+    "ingredient_allergens",
+})
 
 
 def assert_database_schema_is_current() -> None:
