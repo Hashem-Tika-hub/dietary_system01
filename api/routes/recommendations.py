@@ -20,6 +20,7 @@ from api.services.feedback_collaborative_filter import (
     ExplicitFeedbackCollaborativeFilter,
     FeedbackRecord,
 )
+from api.services.allergen_eligibility import eligible_external_ids
 from api.services.weekly_plan_totals import build_change_summary, summarize_week
 from api.schemas      import (MealRequest, MealRecommendationResponse,
                                FoodRecommendation, WeeklyPlanResponse,
@@ -93,6 +94,22 @@ def _user_dict(user: User, db: Session | None = None) -> dict:
     }
 
 
+def _catalog_eligible_fdc_ids(user: User, db: Session) -> set[str] | None:
+    """Return catalog-backed safe candidates for declared allergies.
+
+    Returning ``None`` when no allergy is declared preserves the standard CBF
+    candidate pool.  A declared allergy returns a concrete set, possibly empty,
+    so unknown catalog evidence cannot be ranked as if it were safe.
+    """
+    if not (user.allergies or []):
+        return None
+    return eligible_external_ids(
+        db,
+        engine.catalog_candidate_fdc_ids(),
+        user.allergies or [],
+    )
+
+
 def _weekly_plan_response(
     plan_row: WeeklyPlan,
     user: User,
@@ -163,6 +180,10 @@ def recommend_meal(
 
         # MealLog changes the nutritional budget only. It never adds a
         # preference signal and does not change CF readiness or its weights.
+        catalog_eligible_ids = _catalog_eligible_fdc_ids(user, db)
+        recommendation_kwargs = {"meal_target_calories": effective_meal_calories}
+        if catalog_eligible_ids is not None:
+            recommendation_kwargs["eligible_fdc_ids"] = catalog_eligible_ids
         items = (
             []
             if daily_budget_exhausted
@@ -170,7 +191,7 @@ def recommend_meal(
                 user_data,
                 req.meal,
                 req.top_k,
-                meal_target_calories=effective_meal_calories,
+                **recommendation_kwargs,
             )
         )
 
@@ -230,7 +251,11 @@ def get_current_weekly(
         return _weekly_plan_response(existing, user, db)
 
     try:
-        plan = engine.generate_weekly_plan(_user_dict(user, db))
+        catalog_eligible_ids = _catalog_eligible_fdc_ids(user, db)
+        plan_kwargs = {}
+        if catalog_eligible_ids is not None:
+            plan_kwargs["eligible_fdc_ids"] = catalog_eligible_ids
+        plan = engine.generate_weekly_plan(_user_dict(user, db), **plan_kwargs)
         record = WeeklyPlan(user_id=user.id, plan_data=plan)
         db.add(record); db.commit(); db.refresh(record)
         return _weekly_plan_response(record, user, db)
@@ -249,7 +274,11 @@ def regenerate_weekly(
     """يولّد خطة أسبوعية جديدة كليًا ويحفظها كأحدث خطة — يُستخدم فقط عند
     ضغط المستخدم على زر "توليد خطة جديدة" الصريح."""
     try:
-        plan = engine.generate_weekly_plan(_user_dict(user, db))
+        catalog_eligible_ids = _catalog_eligible_fdc_ids(user, db)
+        plan_kwargs = {}
+        if catalog_eligible_ids is not None:
+            plan_kwargs["eligible_fdc_ids"] = catalog_eligible_ids
+        plan = engine.generate_weekly_plan(_user_dict(user, db), **plan_kwargs)
         record = WeeklyPlan(user_id=user.id, plan_data=plan)
         db.add(record); db.commit(); db.refresh(record)
         return _weekly_plan_response(record, user, db)
@@ -277,8 +306,16 @@ def weekly_alternatives(
     current_fdc = current.get("fdc_id") if current else None
 
     try:
+        catalog_eligible_ids = _catalog_eligible_fdc_ids(user, db)
+        alternatives_kwargs = {}
+        if catalog_eligible_ids is not None:
+            alternatives_kwargs["eligible_fdc_ids"] = catalog_eligible_ids
         alts = engine.get_swap_alternatives(
-            _user_dict(user, db), req.meal, req.slot, current_fdc
+            _user_dict(user, db),
+            req.meal,
+            req.slot,
+            current_fdc,
+            **alternatives_kwargs,
         )
         return [FoodRecommendation(**a) for a in alts]
     except Exception as e:
@@ -303,9 +340,18 @@ def weekly_swap(
         user_data = _user_dict(user, db)
         targets = engine.get_user_targets(user_data)
         before_totals = summarize_week(plan_row.plan_data, targets)
+        catalog_eligible_ids = _catalog_eligible_fdc_ids(user, db)
+        swap_kwargs = {}
+        if catalog_eligible_ids is not None:
+            swap_kwargs["eligible_fdc_ids"] = catalog_eligible_ids
         updated = engine.swap_meal_item(
-            dict(plan_row.plan_data), req.day, req.meal, req.slot,
-            req.new_fdc_id, user_data
+            dict(plan_row.plan_data),
+            req.day,
+            req.meal,
+            req.slot,
+            req.new_fdc_id,
+            user_data,
+            **swap_kwargs,
         )
         after_totals = summarize_week(updated, targets)
         change_summary = build_change_summary(

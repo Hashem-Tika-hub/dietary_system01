@@ -82,6 +82,12 @@ def build_user(data: dict) -> UserProfile:
     return user
 
 
+def catalog_candidate_fdc_ids() -> set[str]:
+    """Return the CBF catalog identifiers evaluated by API eligibility checks."""
+    engine = get_engine()
+    return {str(value) for value in engine.cbf.foods_df["fdc_id"].dropna()}
+
+
 def get_ranking_metadata(user_data: dict) -> dict:
     """Explain whether the active ranker is content-based or truly hybrid."""
     user = build_user(user_data)
@@ -104,6 +110,7 @@ def recommend_meal(
     meal: str,
     top_k: int = 5,
     meal_target_calories: float | None = None,
+    eligible_fdc_ids: set[str] | None = None,
 ) -> list:
     """
     توصيات وجبة واحدة — يرجع "طبق" (list من dicts)، صنف واحد لكل خانة
@@ -117,19 +124,33 @@ def recommend_meal(
         user,
         meal=meal,
         meal_target_calories=meal_target_calories,
+        eligible_fdc_ids=eligible_fdc_ids,
     )
 
 
-def generate_weekly_plan(user_data: dict) -> dict:
+def generate_weekly_plan(
+    user_data: dict,
+    eligible_fdc_ids: set[str] | None = None,
+) -> dict:
     """خطة أسبوعية كاملة"""
     user = build_user(user_data)
     engine = get_engine()
-    plan = engine.generate_weekly_plan(user, days=7)
+    plan = engine.generate_weekly_plan(
+        user,
+        days=7,
+        eligible_fdc_ids=eligible_fdc_ids,
+    )
     return plan
 
 
-def get_swap_alternatives(user_data: dict, meal: str, slot: str,
-                          current_fdc_id: str = None, top_k: int = 6) -> list:
+def get_swap_alternatives(
+    user_data: dict,
+    meal: str,
+    slot: str,
+    current_fdc_id: str = None,
+    top_k: int = 6,
+    eligible_fdc_ids: set[str] | None = None,
+) -> list:
     """
     بدائل ممكنة لصنف معيّن داخل خانة معيّنة (بروتين/نشويات/خضار...)
     بوجبة معيّنة — تُستخدم لميزة "استبدال الوجبة".
@@ -142,7 +163,12 @@ def get_swap_alternatives(user_data: dict, meal: str, slot: str,
         return []
 
     exclude = [current_fdc_id] if current_fdc_id else None
-    candidates = engine._score_candidates(user, meal, exclude_ids=exclude)
+    candidates = engine._score_candidates(
+        user,
+        meal,
+        exclude_ids=exclude,
+        eligible_fdc_ids=eligible_fdc_ids,
+    )
     if candidates.empty:
         return []
 
@@ -184,8 +210,15 @@ def get_swap_alternatives(user_data: dict, meal: str, slot: str,
     return results
 
 
-def swap_meal_item(plan_data: dict, day: str, meal: str, slot: str,
-                   new_fdc_id: str, user_data: dict) -> dict:
+def swap_meal_item(
+    plan_data: dict,
+    day: str,
+    meal: str,
+    slot: str,
+    new_fdc_id: str,
+    user_data: dict,
+    eligible_fdc_ids: set[str] | None = None,
+) -> dict:
     """يستبدل صنفًا محددًا (بالخانة) داخل خطة محفوظة بصنف جديد، مع إعادة
     حساب حصته الواقعية حسب نفس حصة الخانة من هدف الوجبة."""
     user = build_user(user_data)
@@ -193,7 +226,11 @@ def swap_meal_item(plan_data: dict, day: str, meal: str, slot: str,
 
     # Select only from the same eligible candidate pool used by alternatives.
     # This prevents a direct API request from bypassing allergy or hard filters.
-    eligible_candidates = engine._score_candidates(user, meal)
+    eligible_candidates = engine._score_candidates(
+        user,
+        meal,
+        eligible_fdc_ids=eligible_fdc_ids,
+    )
     match = eligible_candidates[
         eligible_candidates["fdc_id"].astype(str) == str(new_fdc_id)
     ]
