@@ -17,6 +17,7 @@ from typing import Iterable
 from sqlalchemy.orm import Session
 
 from api.db_models import CatalogSource, Food, FoodNutrient, FoodPortion
+from api.services.catalog_readiness import catalog_readiness, ensure_reference_allergens
 
 
 NUTRIENT_COLUMNS: dict[str, tuple[str, str]] = {
@@ -80,7 +81,7 @@ def import_food_catalog(
     *,
     source_code: str = "curated-foods-csv",
     source_name: str = "Curated foods CSV import",
-) -> dict[str, int | str]:
+) -> dict[str, object]:
     """Upsert a curated food CSV into the relational catalog.
 
     The function flushes but does not commit.  The caller controls the
@@ -91,6 +92,7 @@ def import_food_catalog(
         raise CatalogImportError(f"ملف الكتالوج غير موجود: {csv_path}")
 
     checksum = _checksum(csv_path)
+    reference_allergens_created = ensure_reference_allergens(db)
     source = db.query(CatalogSource).filter(CatalogSource.code == source_code).one_or_none()
     if source is None:
         source = CatalogSource(
@@ -183,4 +185,6 @@ def import_food_catalog(
         "imported_foods": imported,
         "created_foods": created,
         "nutrient_upserts": nutrient_upserts,
+        "reference_allergens_created": reference_allergens_created,
+        "readiness": catalog_readiness(db),
     }

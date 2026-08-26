@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from api.database import get_db
 from api.db_models import Food
-from api.schemas import FoodItem, FoodSearchResponse
+from api.schemas import CatalogReadinessResponse, FoodItem, FoodSearchResponse
+from api.services.catalog_readiness import catalog_readiness
 
 
 router = APIRouter(prefix="/foods", tags=["Foods"])
@@ -97,6 +98,12 @@ def list_foods(
 
     total = len(foods)
     return FoodSearchResponse(total=total, foods=foods[offset: offset + limit])
+
+
+@router.get("/readiness", response_model=CatalogReadinessResponse, summary="Get catalog readiness")
+def get_catalog_readiness(db: Session = Depends(get_db)):
+    """Expose measured catalog availability and allergen-evidence completeness."""
+    return catalog_readiness(db)
 
 
 @router.get("/{food_id}", response_model=FoodItem, summary="Get food by ID")

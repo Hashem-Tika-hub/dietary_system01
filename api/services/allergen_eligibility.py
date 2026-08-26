@@ -14,7 +14,7 @@ from typing import Iterable
 from sqlalchemy.orm import Session
 
 from api.db_models import Allergen, Food, FoodAllergen, FoodIngredient, IngredientAllergen
-from meal_rules import declared_allergen_codes
+from ml.core.meal_rules import declared_allergen_codes
 
 
 BLOCKED = "blocked"
