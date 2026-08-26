@@ -1,117 +1,113 @@
-# ============================================================
-#  api/routes/foods.py
-#  GET /foods        — list/search foods with filters
-#  GET /foods/{id}   — get single food details
-# ============================================================
+"""Food catalog search backed by the relational catalog database."""
 
-from typing import Optional, List
-import pandas as pd
-from pathlib import Path
+from __future__ import annotations
 
-from fastapi import APIRouter, Query, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload, selectinload
+
+from api.database import get_db
+from api.db_models import Food
 from api.schemas import FoodItem, FoodSearchResponse
 
-router  = APIRouter(prefix="/foods", tags=["Foods"])
 
-# Load CSV once at import time
-_CSV_PATH = Path(__file__).parent.parent.parent / "data" / "foods_clean.csv"
-_foods_df: Optional[pd.DataFrame] = None
+router = APIRouter(prefix="/foods", tags=["Foods"])
+
+_NUTRIENT_CODES = {
+    "calories": "energy_kcal",
+    "protein": "protein_g",
+    "carbs": "carbs_g",
+    "fat": "fat_g",
+    "fiber": "fiber_g",
+}
 
 
-def _get_df() -> pd.DataFrame:
-    global _foods_df
-    if _foods_df is None:
-        if not _CSV_PATH.exists():
-            raise HTTPException(
-                status_code=503,
-                detail="Food database not ready. Run 03_clean_data.py first."
-            )
-        _foods_df = pd.read_csv(_CSV_PATH, encoding="utf-8-sig")
-    return _foods_df
+def _food_item(food: Food) -> FoodItem:
+    nutrients = {nutrient.nutrient_code: nutrient.amount for nutrient in food.nutrients}
+    return FoodItem(
+        fdc_id=str(food.external_id),
+        name=food.display_name,
+        category=food.category or "",
+        food_group=food.food_group or "",
+        meal_type="، ".join(food.meal_tags or []),
+        source=food.source.name if food.source else "",
+        calories=float(nutrients.get(_NUTRIENT_CODES["calories"], 0.0)),
+        protein=float(nutrients.get(_NUTRIENT_CODES["protein"], 0.0)),
+        carbs=float(nutrients.get(_NUTRIENT_CODES["carbs"], 0.0)),
+        fat=float(nutrients.get(_NUTRIENT_CODES["fat"], 0.0)),
+        fiber=float(nutrients.get(_NUTRIENT_CODES["fiber"], 0.0)),
+        health_score=float(food.health_score),
+        diabetic_friendly=bool(food.diabetic_friendly),
+        low_sodium=bool(food.low_sodium),
+    )
+
+
+def _catalog_query(db: Session):
+    return (
+        db.query(Food)
+        .options(joinedload(Food.source), selectinload(Food.nutrients))
+        .filter(Food.is_active.is_(True))
+    )
+
+
+def _ensure_catalog_has_foods(db: Session) -> None:
+    if not db.query(Food.id).filter(Food.is_active.is_(True)).first():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "كتالوج الطعام غير مستورد بعد. نفّذ الترحيلات ثم استورد "
+                "مصدر الكتالوج الموثق قبل استخدام البحث أو التوصيات."
+            ),
+        )
 
 
 @router.get("", response_model=FoodSearchResponse, summary="Search foods")
 def list_foods(
-    q:                Optional[str]   = Query(None,
-        description="Search by name (partial match)"),
-    category:         Optional[str]   = Query(None,
-        description="Filter by category"),
-    max_calories:     Optional[float] = Query(None, ge=0),
-    min_protein:      Optional[float] = Query(None, ge=0),
-    diabetic_friendly:Optional[bool]  = Query(None),
-    low_sodium:       Optional[bool]  = Query(None),
-    limit:            int             = Query(20, ge=1, le=100),
-    offset:           int             = Query(0,  ge=0),
+    q: Optional[str] = Query(None, description="Search by name (partial match)"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    max_calories: Optional[float] = Query(None, ge=0),
+    min_protein: Optional[float] = Query(None, ge=0),
+    diabetic_friendly: Optional[bool] = Query(None),
+    low_sodium: Optional[bool] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
 ):
-    """
-    Search and filter the food database.
-
-    Examples:
-    - `/foods?q=chicken&max_calories=200`
-    - `/foods?diabetic_friendly=true&min_protein=15`
-    - `/foods?category=vegetables&limit=10`
-    """
-    df = _get_df().copy()
-
-    # Apply filters
+    """Search the catalog database, never an in-memory CSV snapshot."""
+    _ensure_catalog_has_foods(db)
+    query = _catalog_query(db)
     if q:
-        df = df[df["name"].str.contains(q, case=False, na=False, regex=False)]
+        query = query.filter(Food.display_name.ilike(f"%{q.strip()}%"))
     if category:
-        df = df[df["category"].str.contains(category, case=False, na=False, regex=False)]
+        query = query.filter(Food.category.ilike(f"%{category.strip()}%"))
+    if diabetic_friendly is not None:
+        query = query.filter(Food.diabetic_friendly.is_(diabetic_friendly))
+    if low_sodium is not None:
+        query = query.filter(Food.low_sodium.is_(low_sodium))
+
+    # Nutrient values are normalized in FoodNutrient and loaded in one batch.
+    # The curated catalog is deliberately small enough for deterministic
+    # in-service filtering; database pagination still happens after filtering.
+    foods = [_food_item(food) for food in query.order_by(Food.id).all()]
     if max_calories is not None:
-        df = df[df["calories"] <= max_calories]
+        foods = [food for food in foods if food.calories <= max_calories]
     if min_protein is not None:
-        df = df[df["protein"] >= min_protein]
-    if diabetic_friendly is not None and "diabetic_friendly" in df.columns:
-        df = df[df["diabetic_friendly"] == diabetic_friendly]
-    if low_sodium is not None and "low_sodium" in df.columns:
-        df = df[df["low_sodium"] == low_sodium]
+        foods = [food for food in foods if food.protein >= min_protein]
 
-    total = len(df)
-    page  = df.iloc[offset: offset + limit]
-
-    foods = []
-    for _, row in page.iterrows():
-        foods.append(FoodItem(
-            fdc_id           = str(row.get("fdc_id", "")),
-            name             = str(row.get("name", "")),
-            category         = str(row.get("category", "")),
-            source           = str(row.get("source", "")),
-            calories         = float(row.get("calories", 0)),
-            protein          = float(row.get("protein", 0)),
-            carbs            = float(row.get("carbs", 0)),
-            fat              = float(row.get("fat", 0)),
-            fiber            = float(row.get("fiber", 0)),
-            health_score     = float(row.get("health_score", 0)),
-            diabetic_friendly= bool(row.get("diabetic_friendly", False)),
-            low_sodium       = bool(row.get("low_sodium", False)),
-        ))
-
-    return FoodSearchResponse(total=total, foods=foods)
+    total = len(foods)
+    return FoodSearchResponse(total=total, foods=foods[offset: offset + limit])
 
 
 @router.get("/{food_id}", response_model=FoodItem, summary="Get food by ID")
-def get_food(food_id: str):
-    """Get detailed nutritional info for a single food item."""
-    df  = _get_df()
-    row = df[df["fdc_id"].astype(str) == food_id]
-
-    if row.empty:
-        raise HTTPException(status_code=404,
-                            detail=f"Food '{food_id}' not found")
-
-    r = row.iloc[0]
-    return FoodItem(
-        fdc_id           = str(r.get("fdc_id", "")),
-        name             = str(r.get("name", "")),
-        category         = str(r.get("category", "")),
-        source           = str(r.get("source", "")),
-        calories         = float(r.get("calories", 0)),
-        protein          = float(r.get("protein", 0)),
-        carbs            = float(r.get("carbs", 0)),
-        fat              = float(r.get("fat", 0)),
-        fiber            = float(r.get("fiber", 0)),
-        health_score     = float(r.get("health_score", 0)),
-        diabetic_friendly= bool(r.get("diabetic_friendly", False)),
-        low_sodium       = bool(r.get("low_sodium", False)),
+def get_food(food_id: str, db: Session = Depends(get_db)):
+    """Get a single active catalog item by its stable external identifier."""
+    _ensure_catalog_has_foods(db)
+    food = (
+        _catalog_query(db)
+        .filter(Food.external_id == str(food_id))
+        .one_or_none()
     )
+    if food is None:
+        raise HTTPException(status_code=404, detail=f"Food '{food_id}' not found")
+    return _food_item(food)
