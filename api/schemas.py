@@ -419,3 +419,18 @@ class FoodItem(BaseModel):
 class FoodSearchResponse(BaseModel):
     total:  int
     foods:  List[FoodItem]
+
+
+class CatalogReadinessResponse(BaseModel):
+    """توفر كتالوج الطعام واكتمال أدلة الحساسية، لا حكم طبي على الطعام."""
+    active_foods: int
+    foods_with_required_nutrients: int
+    foods_missing_required_nutrients: int
+    reference_allergens: int
+    foods_with_any_allergen_evidence: int
+    foods_missing_allergen_evidence: int
+    foods_with_unknown_allergen_evidence: int
+    foods_with_complete_reference_allergen_evidence: int
+    catalog_loaded: bool
+    allergy_evidence_complete: bool
+    status: str

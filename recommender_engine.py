@@ -3,7 +3,6 @@
 #  يُحمَّل مرة واحدة عند بدء السيرفر ويبقى في الذاكرة
 # ============================================================
 
-import importlib.util
 import pickle
 
 import pandas as pd
@@ -18,27 +17,14 @@ from api.services.recommendation_policy import (
 BASE  = Path(__file__).parent
 MODEL = BASE / "models"
 
-
-def _import(filename, alias):
-    spec = importlib.util.spec_from_file_location(
-        alias, BASE / filename
-    )
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-# ── تحميل الوحدات ─────────────────────────────────────────
-_up  = _import("05_user_profiler.py",     "up")
-_cbf = _import("07_cbf_model.py",         "cbf")
-_cf  = _import("08_cf_model.py",          "cf")
-_hr  = _import("09_hybrid_recommender.py","hr")
-_mr  = _import("meal_rules.py",           "mr")
-
-UserProfile       = _up.UserProfile
-ContentBasedFilter= _cbf.ContentBasedFilter
-CollaborativeFilter= _cf.CollaborativeFilter
-HybridRecommender = _hr.HybridRecommender
+# ── وحدات ML التشغيلية ─────────────────────────────────────
+# تستخدم API الآن الحزمة المنظمة فقط. لا يُحمّل نموذج CF القديم المدرّب
+# على تقييمات مصطنعة؛ الدرجات التعاونية المسموح بها تأتي من التفاعل الصريح.
+from ml.core import hybrid_recommender as _hr
+from ml.core import meal_rules as _mr
+from ml.core.cbf_model import ContentBasedFilter
+from ml.core.hybrid_recommender import HybridRecommender
+from ml.core.user_profiler import UserProfile
 
 
 # ── Singleton: يُحمَّل مرة واحدة فقط ─────────────────────
