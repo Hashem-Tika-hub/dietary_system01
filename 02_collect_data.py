@@ -22,10 +22,15 @@
 import requests
 import pandas as pd
 import time
-from config import (USDA_API_KEY, USDA_BASE_URL, USDA_PAGE_SIZE,
-                    USDA_DATA_TYPES, NUTRIENTS_MAP, SEARCH_TERMS, DATA_DIR)
-
-DATA_DIR.mkdir(exist_ok=True)
+from config import (
+    RAW_COLLECTED_FOODS_PATH,
+    NUTRIENTS_MAP,
+    SEARCH_TERMS,
+    USDA_API_KEY,
+    USDA_BASE_URL,
+    USDA_DATA_TYPES,
+    USDA_PAGE_SIZE,
+)
 
 
 # ── Fetch one search term ─────────────────────────────────
@@ -217,11 +222,10 @@ if __name__ == "__main__":
     cols_exist = [c for c in cols_order if c in df_all.columns]
     df_all = df_all[cols_exist]
 
-    raw_path = DATA_DIR / "foods_raw.csv"
-    df_all.to_csv(raw_path, index=False, encoding="utf-8-sig")
+    df_all.to_csv(RAW_COLLECTED_FOODS_PATH, index=False, encoding="utf-8-sig")
 
     print(f"\n{'=' * 55}")
-    print(f"  Saved to: {raw_path}")
+    print(f"  Saved to: {RAW_COLLECTED_FOODS_PATH}")
     print(f"  Total foods : {len(df_all)}")
     print(f"  USDA foods  : {len(df_usda)}")
     print(f"  Local foods : {len(df_local)}")

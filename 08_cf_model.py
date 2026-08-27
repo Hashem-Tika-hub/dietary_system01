@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing    import MinMaxScaler
 from pathlib import Path
-from config  import DATA_DIR, MODEL_DIR
+from config import CHARTS_DIR, MODEL_DIR, PROCESSED_FOODS_PATH, SYNTHETIC_USERS_PATH
 
 import importlib.util
 
@@ -260,7 +260,7 @@ def plot_ratings_heatmap(ratings: np.ndarray):
                  fontweight="bold")
     ax.set_xlabel("الfoods (رقم)")
     ax.set_ylabel("الusers (رقم)")
-    path = DATA_DIR / "charts" / "10_ratings_heatmap.png"
+    path = CHARTS_DIR / "10_ratings_heatmap.png"
     plt.tight_layout()
     plt.savefig(path, dpi=140, bbox_inches="tight")
     plt.close()
@@ -278,8 +278,8 @@ if __name__ == "__main__":
 
     # 1. تحميل البيانات
     print("\n[1/5] Loading data...")
-    users_path = DATA_DIR / "synthetic_users.csv"
-    foods_path = DATA_DIR / "foods_clean.csv"
+    users_path = SYNTHETIC_USERS_PATH
+    foods_path = PROCESSED_FOODS_PATH
     if not users_path.exists():
         raise FileNotFoundError("شغّل أولاً: python 05_user_profiler.py")
     if not foods_path.exists():

@@ -54,7 +54,7 @@ if __name__ == "__main__":
         print("  Phase 2 completed! ✓")
         print("  Fileات الناتجة:")
         for f in ["models/kmeans_model.pkl","models/cbf_model.pkl",
-                  "models/cf_model.pkl","data/evaluation_results.csv"]:
+                  "models/cf_model.pkl","data/outputs/evaluations/evaluation_results.csv"]:
             p = Path(f)
             exists = "✓" if p.exists() else "✗"
             print(f"    {exists} {f}")

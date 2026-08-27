@@ -25,7 +25,7 @@ def main() -> None:
     parser.add_argument(
         "--csv",
         type=Path,
-        default=ROOT / "data" / "foods_clean.csv",
+        default=ROOT / "data" / "processed" / "foods_clean.csv",
         help="مسار CSV المعالج للكتالوج",
     )
     parser.add_argument("--source-code", default="curated-foods-csv")

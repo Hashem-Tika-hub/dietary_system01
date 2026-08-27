@@ -17,6 +17,8 @@ env/
 data/dietary.db
 data/*.db
 data/*.sqlite3
+data/**/*.db
+data/**/*.sqlite3
 
 # ── Flutter / Dart ────────────────────────────────────────
 # هذا اللي كان ناقص فعليًا — build/ سبق وانرفعت بالغلط

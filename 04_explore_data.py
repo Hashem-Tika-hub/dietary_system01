@@ -3,7 +3,7 @@
 #  الأمر: python 04_explore_data.py
 #
 #  يرسم مخططات توضيحية لفهم البيانات قبل بناء النموذج
-#  المخرجات: data/charts/ (folder يحتوي على صور PNG)
+#  المخرجات: data/outputs/analysis/charts/ (folder يحتوي على صور PNG)
 # ============================================================
 
 import pandas as pd
@@ -12,7 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from pathlib import Path
-from config import DATA_DIR
+from config import CHARTS_DIR, PROCESSED_FOODS_PATH
 
 # ── إعداد matplotlib ──────────────────────────────────────
 matplotlib.rcParams["axes.unicode_minus"] = False
@@ -27,9 +27,7 @@ plt.rcParams.update({
     "font.size"        : 11,
 })
 
-CHARTS_DIR = DATA_DIR / "charts"
-CHARTS_DIR.mkdir(exist_ok=True)
-CLEAN_PATH = DATA_DIR / "foods_clean.csv"
+CLEAN_PATH = PROCESSED_FOODS_PATH
 
 # ── ألوان المشروع ─────────────────────────────────────────
 C_BLUE   = "#2a78d6"

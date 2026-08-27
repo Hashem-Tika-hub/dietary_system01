@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-from config import DATA_DIR, MODEL_DIR
+from config import CHARTS_DIR, EVALUATION_RESULTS_PATH, MODEL_DIR, PROCESSED_FOODS_PATH
 
 import importlib.util
 
@@ -227,7 +227,7 @@ def plot_evaluation_results(df: pd.DataFrame):
         ax.legend(fontsize=8)
 
     plt.tight_layout()
-    path = DATA_DIR / "charts" / "12_evaluation.png"
+    path = CHARTS_DIR / "12_evaluation.png"
     plt.savefig(path, dpi=140, bbox_inches="tight")
     plt.close()
     print(f"  ✓ Evaluation chart saved: {path.name}")
@@ -293,7 +293,7 @@ if __name__ == "__main__":
 
     # 2. تحميل بيانات الfoods
     print("\n[2/4] تحميل بيانات الfoods...")
-    foods_df = pd.read_csv(DATA_DIR / "foods_clean.csv", encoding="utf-8-sig")
+    foods_df = pd.read_csv(PROCESSED_FOODS_PATH, encoding="utf-8-sig")
 
     # 3. بناء cluster اختبار (10 usersين متنوعين)
     print("\n[3/4] إنشاء cluster الاختبار...")
@@ -320,7 +320,7 @@ if __name__ == "__main__":
     df_results = evaluate_system(hr, test_users, foods_df, k_values=[5, 10])
 
     # حفظ النتائج
-    out_path = DATA_DIR / "evaluation_results.csv"
+    out_path = EVALUATION_RESULTS_PATH
     df_results.to_csv(out_path, index=False, encoding="utf-8-sig")
     print(f"  ✓ Results saved: {out_path.name}")
 
