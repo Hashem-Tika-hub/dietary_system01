@@ -2,7 +2,7 @@
 """Audit a local SQLite database without mutating any data.
 
 Usage:
-    python scripts/audit_database_integrity.py data/dietary.db
+    python scripts/audit_database_integrity.py /path/to/dietary.db
 """
 
 from __future__ import annotations
@@ -135,7 +135,10 @@ def audit(database_path: Path) -> dict:
 
 
 def main() -> None:
-    database_path = Path(sys.argv[1] if len(sys.argv) > 1 else "data/dietary.db")
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: python scripts/audit_database_integrity.py /path/to/dietary.db")
+
+    database_path = Path(sys.argv[1])
     if not database_path.is_file():
         raise SystemExit(f"Database file not found: {database_path}")
     print(json.dumps(audit(database_path), ensure_ascii=False, indent=2))
