@@ -179,3 +179,26 @@ def test_foods_api_reports_unseeded_catalog_cleanly(catalog_session: Session) ->
 
     assert response.status_code == 503
     assert "كتالوج الطعام غير مستورد" in response.json()["detail"]
+
+
+def test_catalog_import_excludes_and_retires_explicitly_non_halal_food(
+    catalog_session: Session, catalog_csv: Path
+) -> None:
+    import_food_catalog(catalog_session, catalog_csv)
+    catalog_session.commit()
+
+    catalog_csv.write_text(
+        CSV_HEADER
+        + "SAFE1,Pork loin,لحوم,بروتين,غداء، عشاء,قياسي,180,32,0,6,0,0,80,10,1,91,True,True,True\n"
+        + "SAFE2,أرز بني,نشويات,نشويات,غداء، عشاء,قياسي,220,5,46,2,4,1,10,20,1,75,False,True,True\n",
+        encoding="utf-8-sig",
+    )
+    result = import_food_catalog(catalog_session, catalog_csv)
+    catalog_session.commit()
+
+    pork = catalog_session.query(Food).filter(Food.external_id == "SAFE1").one()
+    rice = catalog_session.query(Food).filter(Food.external_id == "SAFE2").one()
+    assert result["imported_foods"] == 1
+    assert result["skipped_explicit_cultural_restrictions"] == 1
+    assert pork.is_active is False
+    assert rice.is_active is True

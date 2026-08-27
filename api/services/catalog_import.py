@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from api.db_models import CatalogSource, Food, FoodNutrient, FoodPortion
 from api.services.catalog_readiness import catalog_readiness, ensure_reference_allergens
+from api.services.halal_policy import explicit_non_halal_reasons
 
 
 NUTRIENT_COLUMNS: dict[str, tuple[str, str]] = {
@@ -117,15 +118,21 @@ def import_food_catalog(
     imported = 0
     created = 0
     nutrient_upserts = 0
-    seen_external_ids: set[str] = set()
+    skipped_explicit_cultural_restrictions = 0
+    seen_input_external_ids: set[str] = set()
+    eligible_external_ids: set[str] = set()
 
     for row in _rows(csv_path):
         external_id = str(row["fdc_id"]).strip()
         if not external_id:
             raise CatalogImportError("يوجد صف بدون fdc_id في الكتالوج")
-        if external_id in seen_external_ids:
+        if external_id in seen_input_external_ids:
             raise CatalogImportError(f"fdc_id مكرر في الكتالوج: {external_id}")
-        seen_external_ids.add(external_id)
+        seen_input_external_ids.add(external_id)
+        if explicit_non_halal_reasons(row.get("name")):
+            skipped_explicit_cultural_restrictions += 1
+            continue
+        eligible_external_ids.add(external_id)
 
         food = existing_foods.get(external_id)
         if food is None:
@@ -175,7 +182,7 @@ def import_food_catalog(
 
     # A source update should not leave retired rows exposed in search.
     for external_id, food in existing_foods.items():
-        if external_id not in seen_external_ids:
+        if external_id not in eligible_external_ids:
             food.is_active = False
 
     db.flush()
@@ -185,6 +192,7 @@ def import_food_catalog(
         "imported_foods": imported,
         "created_foods": created,
         "nutrient_upserts": nutrient_upserts,
+        "skipped_explicit_cultural_restrictions": skipped_explicit_cultural_restrictions,
         "reference_allergens_created": reference_allergens_created,
         "readiness": catalog_readiness(db),
     }

@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from api.db_models import CatalogSource, Food, FoodNutrient, FoodPortion
 from api.services.catalog_import import CatalogImportError
 from api.services.catalog_readiness import catalog_readiness, ensure_reference_allergens
+from api.services.halal_policy import explicit_non_halal_reasons
 
 
 USDA_FOUNDATION_CSV_URL = (
@@ -178,7 +179,7 @@ def _load_foundation_rows(
     members: dict[str, str],
     *,
     limit: int | None,
-) -> tuple[list[dict[str, object]], int, int]:
+) -> tuple[list[dict[str, object]], int, int, int]:
     categories = {
         str(row["id"]): str(row.get("description") or "").strip()
         for row in _read_csv_rows(archive, members["food_category.csv"])
@@ -213,6 +214,7 @@ def _load_foundation_rows(
     selected: list[dict[str, object]] = []
     skipped_missing_required = 0
     skipped_invalid_selected_nutrients = 0
+    skipped_explicit_cultural_restrictions = 0
     for fdc_id in sorted(foundation_foods, key=int):
         if fdc_id in foods_with_invalid_selected_nutrients:
             skipped_invalid_selected_nutrients += 1
@@ -222,6 +224,9 @@ def _load_foundation_rows(
             skipped_missing_required += 1
             continue
         food = foundation_foods[fdc_id]
+        if explicit_non_halal_reasons(food.get("description")):
+            skipped_explicit_cultural_restrictions += 1
+            continue
         category = categories.get(str(food.get("food_category_id") or ""), "")
         selected.append(
             {
@@ -236,7 +241,12 @@ def _load_foundation_rows(
         )
         if limit is not None and len(selected) >= limit:
             break
-    return selected, skipped_missing_required, skipped_invalid_selected_nutrients
+    return (
+        selected,
+        skipped_missing_required,
+        skipped_invalid_selected_nutrients,
+        skipped_explicit_cultural_restrictions,
+    )
 
 
 def import_usda_foundation_catalog(
@@ -269,6 +279,7 @@ def import_usda_foundation_catalog(
                 rows,
                 skipped_missing_required,
                 skipped_invalid_selected_nutrients,
+                skipped_explicit_cultural_restrictions,
             ) = _load_foundation_rows(archive, members, limit=limit)
     except zipfile.BadZipFile as exc:
         raise CatalogImportError("ملف USDA ليس أرشيف ZIP صالحًا") from exc
@@ -369,6 +380,7 @@ def import_usda_foundation_catalog(
         "nutrient_upserts": nutrient_upserts,
         "skipped_missing_required_nutrients": skipped_missing_required,
         "skipped_invalid_selected_nutrients": skipped_invalid_selected_nutrients,
+        "skipped_explicit_cultural_restrictions": skipped_explicit_cultural_restrictions,
         "reference_allergens_created": reference_allergens_created,
         "readiness": catalog_readiness(db),
     }

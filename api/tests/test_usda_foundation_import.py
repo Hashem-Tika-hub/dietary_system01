@@ -72,9 +72,16 @@ def usda_foundation_archive(tmp_path: Path) -> Path:
             "food_category_id": "11",
             "publication_date": "2026-04-30",
         },
+        {
+            "fdc_id": "900005",
+            "data_type": "foundation_food",
+            "description": "Pork sausage, cooked",
+            "food_category_id": "1",
+            "publication_date": "2026-04-30",
+        },
     ]
     nutrient_rows = []
-    for fdc_id in ("900001", "900002"):
+    for fdc_id in ("900001", "900002", "900005"):
         nutrient_rows.extend(
             [
                 {"id": f"{fdc_id}a", "fdc_id": fdc_id, "nutrient_id": "2047", "amount": "999"},
@@ -135,9 +142,11 @@ def test_usda_foundation_import_is_idempotent_and_keeps_allergies_unknown(
     assert first["created_foods"] == 2
     assert first["skipped_missing_required_nutrients"] == 1
     assert first["skipped_invalid_selected_nutrients"] == 0
+    assert first["skipped_explicit_cultural_restrictions"] == 1
     assert second["created_foods"] == 0
     assert catalog_session.query(CatalogSource).count() == 1
     assert catalog_session.query(Food).count() == 2
+    assert catalog_session.query(Food).filter(Food.external_id == "900005").count() == 0
     assert catalog_session.query(FoodAllergen).count() == 0
     assert catalog_session.query(FoodPortion).count() == 2
 
