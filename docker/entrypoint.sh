@@ -7,5 +7,8 @@ set -eu
 echo "Applying Alembic migrations..."
 alembic upgrade head
 
+echo "Synchronizing reviewed food catalog..."
+python scripts/seed_runtime_catalog.py
+
 echo "Starting Dietary Recommendation API..."
 exec "$@"

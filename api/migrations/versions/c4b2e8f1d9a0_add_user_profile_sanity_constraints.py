@@ -1,9 +1,4 @@
-"""add user profile sanity constraints
-
-Revision ID: c4b2e8f1d9a0
-Revises: a298050d9bcf
-Create Date: 2026-08-20 12:00:00.000000
-"""
+"""Add non-diagnostic sanity constraints to user profiles."""
 
 from typing import Sequence, Union
 
@@ -29,20 +24,28 @@ USER_PROFILE_CHECKS = (
 )
 
 
-def upgrade() -> None:
-    """Add non-diagnostic sanity checks to the users table.
+def _batch_recreate_mode() -> str:
+    """Rebuild only SQLite tables; PostgreSQL supports direct constraint ALTERs.
 
-    Batch mode recreates the table on SQLite, while remaining compatible with
-    PostgreSQL deployments. Existing production data must satisfy these checks
-    before the migration is applied.
+    SQLite needs batch recreation to add or remove check constraints. Forcing
+    that reconstruction on PostgreSQL would attempt to drop ``users`` while
+    dependent foreign keys already exist in runtime tables.
     """
-    with op.batch_alter_table("users", recreate="always") as batch_op:
+
+    return "always" if op.get_bind().dialect.name == "sqlite" else "auto"
+
+
+def upgrade() -> None:
+    """Add non-diagnostic sanity checks to the users table."""
+
+    with op.batch_alter_table("users", recreate=_batch_recreate_mode()) as batch_op:
         for name, condition in USER_PROFILE_CHECKS:
             batch_op.create_check_constraint(name, condition)
 
 
 def downgrade() -> None:
     """Remove the profile sanity checks."""
-    with op.batch_alter_table("users", recreate="always") as batch_op:
+
+    with op.batch_alter_table("users", recreate=_batch_recreate_mode()) as batch_op:
         for name, _ in USER_PROFILE_CHECKS:
             batch_op.drop_constraint(name, type_="check")

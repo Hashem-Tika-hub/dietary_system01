@@ -27,6 +27,7 @@ numpy
 scikit-learn
 matplotlib
 
-# --- PostgreSQL (مطلوب فقط لو بدّلت DATABASE_URL من SQLite إلى Postgres
-#     — موصى به للنشر الفعلي، راجع DEPLOY.md قسم "قاعدة البيانات") ---
-psycopg2-binary
+# --- PostgreSQL ---
+# PostgreSQL هو قاعدة التشغيل للإنتاج. يوفّر extra "binary" حزمة قابلة
+# للتثبيت في صور CI/Docker، بينما يبقى SQLite بلا driver إضافي للتطوير.
+psycopg[binary]

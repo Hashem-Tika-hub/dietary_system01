@@ -1,4 +1,3 @@
-.git
 .github
 .env
 .env.*
@@ -11,6 +10,7 @@ __pycache__/
 *.py[cod]
 *.db
 *.sqlite
+!data/catalog/food_catalog_reference.sqlite3
 app/
 docs/
 reports/
