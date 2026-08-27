@@ -96,9 +96,8 @@ flowchart TD
 | العنصر | الاستخدام |
 |---|---|
 | Python وبيئة افتراضية | عزل تبعيات FastAPI وscikit-learn والاختبارات. |
-| `requirements-deploy.txt` | تبعيات تشغيل الخادم. |
+| `requirements.txt` | تبعيات تشغيل FastAPI ومحرك التوصية وPostgreSQL محليًا وعلى Railway. |
 | `requirements-dev.txt` | تبعيات الاختبارات والتطوير. |
-| `api/requirements_api.txt` | مرجع تبعيات API عند الحاجة. |
 | `.env` | الإعدادات والأسرار المحلية غير المتعقبة. |
 | `app/pubspec.yaml` | تبعيات Flutter. |
 
@@ -109,7 +108,6 @@ flowchart TD
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-deploy.txt
 pip install -r requirements-dev.txt
 alembic upgrade head
 uvicorn api.main:app --reload

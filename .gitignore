@@ -1,11 +1,8 @@
-# ── أسرار / بيئة ──────────────────────────────────────────
 .env
 *.env
-.env.production
 !.env.example
-!.env.production.example
 
-# ── Python ────────────────────────────────────────────────
+# ── Python ──────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -13,7 +10,7 @@ __pycache__/
 venv/
 env/
 
-# ── قاعدة البيانات المحلية ────────────────────────────────
+# ── قاعدة البيانات المحلية ──────────────────────────────────
 data/dietary.db
 data/*.db
 data/*.sqlite3
@@ -24,7 +21,7 @@ data/**/*.sqlite3
 !data/catalog/food_catalog_reference.sqlite3
 !data/catalog/food_catalog_reference.manifest.json
 
-# ── Flutter / Dart ────────────────────────────────────────
+# ── Flutter / Dart ───────────────────────────────────────────
 # هذا اللي كان ناقص فعليًا — build/ سبق وانرفعت بالغلط
 # (app/android/build/reports/problems/problems-report.html)
 # بينما الكود المصدري نفسه (app/lib/*.dart) اتحذف بنفس الـ commit
@@ -39,7 +36,7 @@ app/ios/Pods/
 app/ios/.symlinks/
 app/*.iml
 
-# ── IDE / نظام التشغيل ────────────────────────────────────
+# ── IDE / نظام التشغيل ──────────────────────────────────────
 .vscode/
 .idea/
 .DS_Store

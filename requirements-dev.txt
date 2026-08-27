@@ -1,6 +1,6 @@
-# Development and test tooling for Dietary System.
-# Install after the production dependency set when working locally.
--r requirements-deploy.txt
+# Development and CI dependencies. Runtime dependencies are kept in
+# requirements.txt so Railway and local execution use the same application set.
+-r requirements.txt
 pytest
 pytest-cov
 
