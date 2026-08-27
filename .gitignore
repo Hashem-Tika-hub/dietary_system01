@@ -19,6 +19,10 @@ data/*.db
 data/*.sqlite3
 data/**/*.db
 data/**/*.sqlite3
+# النسخة المرجعية الثابتة للكتالوج فقط؛ لا تشمل أي بيانات مستخدم.
+!data/catalog/
+!data/catalog/food_catalog_reference.sqlite3
+!data/catalog/food_catalog_reference.manifest.json
 
 # ── Flutter / Dart ────────────────────────────────────────
 # هذا اللي كان ناقص فعليًا — build/ سبق وانرفعت بالغلط
