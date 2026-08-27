@@ -14,6 +14,9 @@ USDA_API_KEY = os.getenv("USDA_API_KEY", "DEMO_KEY")
 # ── Paths ─────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
+CATALOG_DATA_DIR = DATA_DIR / "catalog"
+REFERENCE_FOOD_CATALOG_PATH = CATALOG_DATA_DIR / "food_catalog_reference.sqlite3"
+REFERENCE_FOOD_CATALOG_MANIFEST_PATH = CATALOG_DATA_DIR / "food_catalog_reference.manifest.json"
 RAW_DATA_DIR = DATA_DIR / "raw"
 RAW_EXTERNAL_DATA_DIR = RAW_DATA_DIR / "external"
 RAW_COLLECTED_DATA_DIR = RAW_DATA_DIR / "collected"
@@ -37,6 +40,7 @@ PLAN_EXPORTS_DIR = OUTPUTS_DATA_DIR / "plans"
 MODEL_DIR = BASE_DIR / "models"
 for directory in (
     DATA_DIR,
+    CATALOG_DATA_DIR,
     RAW_DATA_DIR,
     RAW_EXTERNAL_DATA_DIR,
     RAW_COLLECTED_DATA_DIR,

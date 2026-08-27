@@ -1,0 +1,46 @@
+{
+  "format": "dietary-system-reference-food-catalog",
+  "format_version": 1,
+  "database_file": "data/catalog/food_catalog_reference.sqlite3",
+  "database_sha256": "9e45d2b6125fc63765182037f0685176d4f464089105dfb079c2d8a4ea4dc2c8",
+  "alembic_revision": "d1e4c73a0f11",
+  "catalog_sources": [
+    {
+      "code": "curated-foods-csv",
+      "name": "Curated foods CSV import",
+      "version": "ecd7f05a1e7e",
+      "license_url": null,
+      "checksum": "ecd7f05a1e7ea302a8a1352bd493714d10dd5600df64386437588c1c1b26a940"
+    },
+    {
+      "code": "usda-fdc-foundation",
+      "name": "USDA FoodData Central Foundation Foods",
+      "version": "2026-04-30",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "checksum": "70457ee9d9342f43bda2010318c85f04210c689fdeb9cd2da4c513b0e8dbc655"
+    }
+  ],
+  "active_row_counts": {
+    "catalog_sources": 2,
+    "foods": 810,
+    "food_nutrients": 6897,
+    "food_portions": 810,
+    "allergens": 7,
+    "ingredients": 0,
+    "food_ingredients": 0,
+    "food_allergens": 0
+  },
+  "excluded_runtime_tables": [
+    "users",
+    "meal_logs",
+    "weekly_plans",
+    "user_food_feedback"
+  ],
+  "foreign_key_violations": [],
+  "review_notes": [
+    "This snapshot contains no users, meal logs, weekly plans, or user feedback tables.",
+    "This snapshot is a food-catalog review artifact. Do not configure it as the mutable runtime database.",
+    "No FoodAllergen or IngredientAllergen evidence is manufactured by this build.",
+    "The halal policy removes only configured explicit pork/alcohol indicators; this is not halal certification."
+  ]
+}

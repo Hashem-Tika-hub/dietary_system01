@@ -85,10 +85,11 @@ def import_catalog():
     print("\n[3/5] Importing curated food catalog...")
     from api.database import SessionLocal
     from api.services.catalog_import import import_food_catalog
+    from config import PROCESSED_FOODS_PATH
 
     db = SessionLocal()
     try:
-        result = import_food_catalog(db, ROOT / "data" / "foods_clean.csv")
+        result = import_food_catalog(db, PROCESSED_FOODS_PATH)
         db.commit()
         print(
             "  ✓  Catalog imported — "
