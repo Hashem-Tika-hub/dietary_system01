@@ -29,26 +29,22 @@ def test_reference_catalog_snapshot_is_reviewable_and_user_data_free() -> None:
     assert manifest["database_file"] == "data/catalog/food_catalog_reference.sqlite3"
     assert manifest["database_sha256"] == sha256(DATABASE_PATH)
     assert manifest["foreign_key_violations"] == []
-    assert manifest["runtime_user_table_counts"] == {
-        "users": 0,
-        "meal_logs": 0,
-        "weekly_plans": 0,
-        "user_food_feedback": 0,
-    }
+    assert manifest["excluded_runtime_tables"] == list(RUNTIME_TABLES)
 
     with sqlite3.connect(DATABASE_PATH) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
-        table_counts = {
-            table: int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
-            for table in RUNTIME_TABLES
+        table_names = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
         }
         active_foods = int(
             connection.execute("SELECT COUNT(*) FROM foods WHERE is_active = 1").fetchone()[0]
         )
         foreign_key_violations = list(connection.execute("PRAGMA foreign_key_check"))
 
-    assert table_counts == manifest["runtime_user_table_counts"]
-    assert table_counts == {table: 0 for table in RUNTIME_TABLES}
+    assert not (set(RUNTIME_TABLES) & table_names)
     assert active_foods == manifest["active_row_counts"]["foods"]
     assert active_foods > 0
     assert foreign_key_violations == []

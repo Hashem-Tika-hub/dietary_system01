@@ -2,7 +2,7 @@
   "format": "dietary-system-reference-food-catalog",
   "format_version": 1,
   "database_file": "data/catalog/food_catalog_reference.sqlite3",
-  "database_sha256": "7970270a09b8828815b4e6aa44b89dec827b05128035386b54ee3fad616d17e8",
+  "database_sha256": "9e45d2b6125fc63765182037f0685176d4f464089105dfb079c2d8a4ea4dc2c8",
   "alembic_revision": "d1e4c73a0f11",
   "catalog_sources": [
     {
@@ -30,14 +30,15 @@
     "food_ingredients": 0,
     "food_allergens": 0
   },
-  "runtime_user_table_counts": {
-    "users": 0,
-    "meal_logs": 0,
-    "weekly_plans": 0,
-    "user_food_feedback": 0
-  },
+  "excluded_runtime_tables": [
+    "users",
+    "meal_logs",
+    "weekly_plans",
+    "user_food_feedback"
+  ],
   "foreign_key_violations": [],
   "review_notes": [
+    "This snapshot contains no users, meal logs, weekly plans, or user feedback tables.",
     "This snapshot is a food-catalog review artifact. Do not configure it as the mutable runtime database.",
     "No FoodAllergen or IngredientAllergen evidence is manufactured by this build.",
     "The halal policy removes only configured explicit pork/alcohol indicators; this is not halal certification."

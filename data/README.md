@@ -50,10 +50,10 @@ data/
 
 ## مراجعة نسخة الكتالوج
 
-يمكن فتح `catalog/food_catalog_reference.sqlite3` ببرنامج SQLite أو DB Browser for SQLite ومراجعة جداول `catalog_sources` و`foods` و`food_nutrients` و`food_portions` و`allergens`. تؤكد الأداة البانية قبل حفظ النسخة أن جداول `users` و`meal_logs` و`weekly_plans` و`user_food_feedback` فارغة، وأنه لا توجد مخالفات مفاتيح خارجية.
+يمكن فتح `catalog/food_catalog_reference.sqlite3` ببرنامج SQLite أو DB Browser for SQLite ومراجعة جداول `catalog_sources` و`foods` و`food_nutrients` و`food_portions` و`allergens`. تحذف الأداة البانية جداول `users` و`meal_logs` و`weekly_plans` و`user_food_feedback` من النسخة المرجعية قبل حفظها، وتتحقق من عدم وجود مخالفات مفاتيح خارجية.
 
 لإعادة بناء النسخة من المصدرين الحاليين، شغّل `python scripts/build_reference_food_catalog.py --download-usda`. ينزّل الأمر أرشيف USDA مؤقتًا فقط ثم يبني النسخة والبيان. لا تضع `DATABASE_URL` للتطبيق على هذا الملف؛ استعمل قاعدة تشغيل منفصلة قابلة للكتابة لبيانات المستخدمين.
 
 ## ما لا يوضع هنا
 
-لا تُضف قواعد SQLite المحلية أو قواعد التشغيل القابلة للكتابة، أو `.env`، أو أرشيفات USDA الكبيرة، أو نماذج التدريب الثنائية إلى هذا المجلد. الاستثناء الوحيد هو `catalog/food_catalog_reference.sqlite3`، وهي نسخة كتالوج ثابتة ومراجعة بلا أي بيانات مستخدم. تحفظ النماذج القابلة لإعادة الإنشاء ضمن `models/` حاليًا إلى أن تُنقل في دفعة مستقلة إلى `artifacts/models/`، وتبقى أرشيفات الاستيراد المؤقتة خارج المستودع.
+لا تُضف قواعد SQLite المحلية أو قواعد التشغيل القابلة للكتابة، أو `.env`، أو أرشيفات USDA الكبيرة، أو نماذج التدريب الثنائية إلى هذا المجلد. الاستثناء الوحيد هو `catalog/food_catalog_reference.sqlite3`، وهي نسخة كتالوج ثابتة ومراجعة لا تتضمن جداول المستخدم أصلًا. تحفظ النماذج القابلة لإعادة الإنشاء ضمن `models/` حاليًا إلى أن تُنقل في دفعة مستقلة إلى `artifacts/models/`، وتبقى أرشيفات الاستيراد المؤقتة خارج المستودع.

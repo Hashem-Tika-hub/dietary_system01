@@ -57,14 +57,17 @@ def build_manifest(database_path: Path, output_path: Path) -> dict[str, Any]:
         foreign_key_violations = [
             dict(row) for row in connection.execute("PRAGMA foreign_key_check")
         ]
-        runtime_counts = {
-            table: query_scalar(connection, f"SELECT COUNT(*) FROM {table}")
-            for table in RUNTIME_TABLES
+        table_names = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
         }
-        if any(runtime_counts.values()):
+        unexpected_runtime_tables = sorted(set(RUNTIME_TABLES) & table_names)
+        if unexpected_runtime_tables:
             raise RuntimeError(
-                "Reference snapshot contains runtime/user records: "
-                + json.dumps(runtime_counts, ensure_ascii=False)
+                "Reference snapshot must not contain runtime/user tables: "
+                + ", ".join(unexpected_runtime_tables)
             )
         if foreign_key_violations:
             raise RuntimeError("Reference snapshot has foreign-key violations")
@@ -99,9 +102,10 @@ def build_manifest(database_path: Path, output_path: Path) -> dict[str, Any]:
         "alembic_revision": revision,
         "catalog_sources": sources,
         "active_row_counts": counts,
-        "runtime_user_table_counts": runtime_counts,
+        "excluded_runtime_tables": list(RUNTIME_TABLES),
         "foreign_key_violations": foreign_key_violations,
         "review_notes": [
+            "This snapshot contains no users, meal logs, weekly plans, or user feedback tables.",
             "This snapshot is a food-catalog review artifact. Do not configure it as the mutable runtime database.",
             "No FoodAllergen or IngredientAllergen evidence is manufactured by this build.",
             "The halal policy removes only configured explicit pork/alcohol indicators; this is not halal certification.",
@@ -161,6 +165,9 @@ def main() -> None:
         run([sys.executable, "scripts/import_food_catalog.py"], environment)
 
         with sqlite3.connect(build_db) as connection:
+            connection.execute("PRAGMA foreign_keys = OFF")
+            for table in RUNTIME_TABLES:
+                connection.execute(f"DROP TABLE IF EXISTS {table}")
             connection.execute("VACUUM")
 
         manifest = build_manifest(build_db, output_path)
