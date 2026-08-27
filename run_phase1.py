@@ -21,7 +21,7 @@ STEPS = [
     ("04_explore_data.py", "رسم المخططات"),
 ]
 # ملاحظة: 02_collect_data.py (جلب USDA) بات اختياريًا/تكميليًا فقط —
-# المصدر الأساسي الآن data/local_food_source.csv (462 صنف محلي موسوم يدويًا)
+# المصدر الأساسي الآن data/raw/local_food_source.csv (462 صنف محلي موسوم يدويًا)
 # شغّله يدويًا فقط لو تريد إضافة مكوّنات خام عامة تكميلية: python 02_collect_data.py
 
 def run_step(script: str, label: str) -> bool:

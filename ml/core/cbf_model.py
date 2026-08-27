@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
-from config import DATA_DIR, MODEL_DIR
+from config import CHARTS_DIR, MODEL_DIR, PROCESSED_FOODS_PATH
 from . import meal_rules
 from .user_profiler import UserProfile
 
@@ -231,7 +231,7 @@ def plot_recommendation_chart(recs: pd.DataFrame,
     axes[1].set_title(f"توزيع مغذيات: {best['name'][:25]}")
 
     plt.tight_layout()
-    path = DATA_DIR / "charts" / "09_cbf_recommendations.png"
+    path = CHARTS_DIR / "09_cbf_recommendations.png"
     plt.savefig(path, dpi=140, bbox_inches="tight")
     plt.close()
     print(f"  ✓ Recommendations chart saved: {path.name}")
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 
     # 1. تحميل بيانات الfoods
     print("\n[1/4] Loading foods_clean.csv...")
-    clean_path = DATA_DIR / "foods_clean.csv"
+    clean_path = PROCESSED_FOODS_PATH
     if not clean_path.exists():
         raise FileNotFoundError("foods_clean.csv غير موجود! شغّل 03_clean_data.py")
     foods = pd.read_csv(clean_path, encoding="utf-8-sig")

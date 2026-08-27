@@ -17,7 +17,7 @@ import numpy as np
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 from pathlib import Path
-from config import DATA_DIR
+from config import SYNTHETIC_USERS_PATH
 
 # ── ثوابت Activity البدني ───────────────────────────────────
 ACTIVITY_FACTORS = {
@@ -283,7 +283,7 @@ def generate_synthetic_users(n: int = 300, seed: int = 42) -> pd.DataFrame:
         records.append(u.to_dict())
 
     df = pd.DataFrame(records)
-    path = DATA_DIR / "synthetic_users.csv"
+    path = SYNTHETIC_USERS_PATH
     df.to_csv(path, index=False, encoding="utf-8-sig")
     return df
 

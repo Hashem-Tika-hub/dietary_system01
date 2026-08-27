@@ -17,7 +17,7 @@ from sklearn.cluster      import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics       import silhouette_score
 from pathlib import Path
-from config  import DATA_DIR, MODEL_DIR
+from config import CHARTS_DIR, MODEL_DIR, SYNTHETIC_USERS_PATH
 
 MODEL_DIR.mkdir(exist_ok=True)
 
@@ -38,7 +38,7 @@ CLUSTER_LABELS = {
 
 
 def load_users() -> pd.DataFrame:
-    path = DATA_DIR / "synthetic_users.csv"
+    path = SYNTHETIC_USERS_PATH
     if not path.exists():
         raise FileNotFoundError(
             "synthetic_users.csv غير موجود!\n"
@@ -100,7 +100,7 @@ def find_optimal_k(X_scaled: np.ndarray,
     axes[1].legend()
 
     plt.tight_layout()
-    chart_path = DATA_DIR / "charts" / "07_kmeans_elbow.png"
+    chart_path = CHARTS_DIR / "07_kmeans_elbow.png"
     plt.savefig(chart_path, dpi=140, bbox_inches="tight")
     plt.close()
     print(f"\n  ✓ Elbow chart saved: {chart_path.name}")
@@ -175,7 +175,7 @@ def plot_clusters(df: pd.DataFrame, labels: np.ndarray):
     ax.set_title("توزيع الusersين في المجموعات", fontweight="bold")
     ax.legend(fontsize=8, loc="upper right")
 
-    chart_path = DATA_DIR / "charts" / "08_clusters_scatter.png"
+    chart_path = CHARTS_DIR / "08_clusters_scatter.png"
     plt.tight_layout()
     plt.savefig(chart_path, dpi=140, bbox_inches="tight")
     plt.close()

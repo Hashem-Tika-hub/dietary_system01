@@ -9,6 +9,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
+PROCESSED_FOODS_PATH = DATA / "processed" / "foods_clean.csv"
+SYNTHETIC_USERS_PATH = DATA / "fixtures" / "synthetic_users.csv"
+EVALUATION_RESULTS_PATH = DATA / "outputs" / "evaluations" / "evaluation_results.csv"
 OUT = ROOT / "reports" / "ml_dataset_audit.json"
 
 
@@ -45,9 +48,9 @@ def sqlite_summary(path: Path) -> dict:
 
 
 def main() -> None:
-    foods = safe_csv(DATA / "foods_clean.csv")
-    users = safe_csv(DATA / "synthetic_users.csv")
-    evaluation = safe_csv(DATA / "evaluation_results.csv")
+    foods = safe_csv(PROCESSED_FOODS_PATH)
+    users = safe_csv(SYNTHETIC_USERS_PATH)
+    evaluation = safe_csv(EVALUATION_RESULTS_PATH)
 
     report = {
         "foods": frame_summary(foods, "foods_clean"),

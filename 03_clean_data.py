@@ -3,22 +3,23 @@
 #  الأمر: python 03_clean_data.py
 #
 #  ما الذي يفعله هذا File؟
-#  1. يقرأ foods_raw.csv الذي جمعناه سابقاً
+#  1. يقرأ local_food_source.csv من طبقة البيانات الخام
 #  2. ينظف البيانات: يُزيل التكرارات والقيم الشاذة
 #  3. يضيف حسابات جديدة: BMI، توزيع المغذيات
 #  4. يصنّف الأطعمة (صحي / متوسط / عالي الcalories)
-#  5. يحفظ النتيجة في foods_clean.csv
+#  5. يحفظ النتيجة في data/processed/foods_clean.csv
 # ============================================================
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from config import DATA_DIR
+from api.services.halal_policy import apply_cultural_food_exclusions
+from config import DATASET_STATS_PATH, PROCESSED_FOODS_PATH, RAW_LOCAL_FOODS_PATH
 
 # ── إعداد المسارات ────────────────────────────────────────
-RAW_PATH   = DATA_DIR / "local_food_source.csv"   # القائمة المحلية المُجمَّعة يدويًا (462 صنف)
-CLEAN_PATH = DATA_DIR / "foods_clean.csv"
-STATS_PATH = DATA_DIR / "dataset_stats.txt"
+RAW_PATH = RAW_LOCAL_FOODS_PATH
+CLEAN_PATH = PROCESSED_FOODS_PATH
+STATS_PATH = DATASET_STATS_PATH
 
 # ── ثوابت التنظيف ─────────────────────────────────────────
 # ملاحظة: كانت 5 سابقًا بافتراض "أقل من 5 = بيانات USDA خاطئة"، لكن هذا
@@ -248,8 +249,11 @@ if __name__ == "__main__":
     df = add_computed_columns(df)
     print(f"  Added {len(df.columns)} columns total")
 
-    # 5. ترتيب نهائي
-    print("\n[5/6] Final ordering...")
+    # 5. تطبيق القيود الثقافية ثم الترتيب النهائي
+    print("\n[5/6] Applying cultural exclusions and final ordering...")
+    before_cultural_exclusions = len(df)
+    df = apply_cultural_food_exclusions(df)
+    print(f"  Excluded {before_cultural_exclusions - len(df):,} foods with explicit pork/alcohol indicators")
     df = final_cleanup(df)
 
     # 6. حفظ

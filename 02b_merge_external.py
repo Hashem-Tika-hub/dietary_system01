@@ -3,21 +3,20 @@
 #  الأمر: python 02b_merge_external.py
 #
 #  ماذا يفعل؟
-#  1. يقرأ foods_raw.csv (البيانات الحالية لكي لا تُمسح).
-#  2. يبحث في مجلد data/external/ عن أي ملفات CSV جديدة.
+#  1. يقرأ data/raw/collected/foods_raw.csv (البيانات الحالية لكي لا تُمسح).
+#  2. يبحث في مجلد data/raw/external/ عن أي ملفات CSV جديدة.
 #  3. يطبق خوارزمية دقيقة جداً لتصنيف الأطعمة.
 #  4. يدمج الجميع، يزيل التكرار، ويحفظ البيانات المحدثة.
 # ============================================================
 
 import pandas as pd
 from pathlib import Path
-from config import DATA_DIR
+from config import RAW_COLLECTED_FOODS_PATH, RAW_EXTERNAL_DATA_DIR
 import re
 
 # ── إعداد المسارات ────────────────────────────────────────
-RAW_PATH = DATA_DIR / "foods_raw.csv"
-EXTERNAL_DIR = DATA_DIR / "external"
-EXTERNAL_DIR.mkdir(exist_ok=True) # إنشاء المجلد إن لم يكن موجوداً
+RAW_PATH = RAW_COLLECTED_FOODS_PATH
+EXTERNAL_DIR = RAW_EXTERNAL_DATA_DIR
 
 # ── محرك التصنيف الذكي (Advanced Categorization) ──────────
 # قاموس يحتوي على الكلمات المفتاحية بالإنجليزية لربطها بالفئات العربية

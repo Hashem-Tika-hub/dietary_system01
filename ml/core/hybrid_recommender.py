@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-from config import DATA_DIR, MODEL_DIR
+from config import CHARTS_DIR, MODEL_DIR, PLAN_EXPORTS_DIR
 from api.services.recommendation_policy import (
     blend_candidate_scores,
     build_food_cluster_map,
@@ -437,7 +437,7 @@ class HybridRecommender:
         ax.set_title("توزيع المغذيات (أسبوع كامل)")
 
         plt.tight_layout()
-        path = DATA_DIR / "charts" / "11_weekly_plan.png"
+        path = CHARTS_DIR / "11_weekly_plan.png"
         plt.savefig(path, dpi=140, bbox_inches="tight")
         plt.close()
         print(f"\n  ✓ Weekly plan chart saved: {path.name}")
@@ -489,7 +489,7 @@ if __name__ == "__main__":
 
         # 4. تصدير + مخطط
         df_plan = hr.plan_to_dataframe(plan)
-        out_csv = DATA_DIR / f"weekly_plan_{user.name}.csv"
+        out_csv = PLAN_EXPORTS_DIR / f"weekly_plan_{user.name}.csv"
         df_plan.to_csv(out_csv, index=False, encoding="utf-8-sig")
         print(f"\n  ✓ Plan saved: {out_csv.name}")
 

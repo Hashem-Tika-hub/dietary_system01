@@ -34,7 +34,7 @@ from sklearn.metrics import (
 from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATASET = ROOT / "data" / "foods_clean.csv"
+DEFAULT_DATASET = ROOT / "data" / "processed" / "foods_clean.csv"
 DEFAULT_REPORTS = ROOT / "reports"
 FEATURES = ("calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium")
 BASE_SEED = 42
