@@ -473,7 +473,6 @@ flowchart TD
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-deploy.txt
 pip install -r requirements-dev.txt
 alembic upgrade head
 uvicorn api.main:app --reload
