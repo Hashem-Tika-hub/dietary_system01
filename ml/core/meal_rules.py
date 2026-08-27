@@ -12,6 +12,8 @@
 import numpy as np
 import pandas as pd
 
+from api.services.halal_policy import apply_cultural_food_exclusions
+
 # ── ربط مفاتيح الوجبة الإنجليزية (المستخدمة في بقية الكود) بوسم meal_type
 # العربي الفعلي في البيانات — بدون هذا، أي مقارنة بين "breakfast" و"فطور"
 # ترجع دائمًا لا شيء
@@ -184,7 +186,9 @@ def apply_hard_filters(df: pd.DataFrame, user, meal: str = None) -> pd.DataFrame
     هذا هو الجزء الذي كان مفقودًا: allergies/dislikes كانت تُحسب ولا تُستخدم،
     و meal كان يُستخدم فقط لحساب الهدف الرقمي لا لاستبعاد الأطعمة.
     """
-    out = df.copy()
+    # 0) الاستبعاد الثقافي العام: المطابقة تقتصر على مؤشرات صريحة في
+    # الوصف/الاسم، ولا تعني نتيجة القبول شهادة حلال أو تحققًا من المكونات.
+    out = apply_cultural_food_exclusions(df)
 
     # 1) نوع الوجبة: الصنف مؤهل فقط لو meal ضمن قائمة meal_type الخاصة به
     if meal and "meal_type" in out.columns:
