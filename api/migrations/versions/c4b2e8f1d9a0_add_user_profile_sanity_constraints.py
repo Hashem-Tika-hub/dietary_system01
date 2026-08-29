@@ -1,4 +1,4 @@
-"""add user profile sanity constraints
+"""Add user profile sanity constraints.
 
 Revision ID: c4b2e8f1d9a0
 Revises: a298050d9bcf
@@ -10,7 +10,6 @@ from typing import Sequence, Union
 from alembic import op
 
 
-# revision identifiers, used by Alembic.
 revision: str = "c4b2e8f1d9a0"
 down_revision: Union[str, Sequence[str], None] = "a298050d9bcf"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -29,20 +28,32 @@ USER_PROFILE_CHECKS = (
 )
 
 
-def upgrade() -> None:
-    """Add non-diagnostic sanity checks to the users table.
+def _is_sqlite() -> bool:
+    return op.get_bind().dialect.name == "sqlite"
 
-    Batch mode recreates the table on SQLite, while remaining compatible with
-    PostgreSQL deployments. Existing production data must satisfy these checks
-    before the migration is applied.
+
+def upgrade() -> None:
+    """Add non-diagnostic sanity checks without dropping dependent FKs.
+
+    SQLite requires batch table recreation for check constraints. PostgreSQL
+    supports adding the constraints directly, so its users primary key and
+    dependent foreign keys remain intact.
     """
-    with op.batch_alter_table("users", recreate="always") as batch_op:
+    if _is_sqlite():
+        with op.batch_alter_table("users", recreate="always") as batch_op:
+            for name, condition in USER_PROFILE_CHECKS:
+                batch_op.create_check_constraint(name, condition)
+    else:
         for name, condition in USER_PROFILE_CHECKS:
-            batch_op.create_check_constraint(name, condition)
+            op.create_check_constraint(name, "users", condition)
 
 
 def downgrade() -> None:
     """Remove the profile sanity checks."""
-    with op.batch_alter_table("users", recreate="always") as batch_op:
-        for name, _ in USER_PROFILE_CHECKS:
-            batch_op.drop_constraint(name, type_="check")
+    if _is_sqlite():
+        with op.batch_alter_table("users", recreate="always") as batch_op:
+            for name, _ in USER_PROFILE_CHECKS:
+                batch_op.drop_constraint(name, type_="check")
+    else:
+        for name, _ in reversed(USER_PROFILE_CHECKS):
+            op.drop_constraint(name, "users", type_="check")
