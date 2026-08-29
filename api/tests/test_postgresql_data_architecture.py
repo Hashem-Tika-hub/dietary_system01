@@ -20,14 +20,19 @@ def test_postgresql_migrations_create_normalized_food_architecture() -> None:
     assert POSTGRES_TEST_URL is not None
     environment = os.environ.copy()
     environment["DATABASE_URL"] = POSTGRES_TEST_URL
-    subprocess.run(
+    migration = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=PROJECT_ROOT,
         env=environment,
-        check=True,
         capture_output=True,
         text=True,
     )
+    if migration.returncode != 0:
+        pytest.fail(
+            "Alembic PostgreSQL migration failed:\n"
+            f"stdout:\n{migration.stdout}\n"
+            f"stderr:\n{migration.stderr}"
+        )
 
     engine = create_engine(POSTGRES_TEST_URL)
     try:
