@@ -10,7 +10,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from api.database import Base, get_db
-from api.db_models import Allergen, Food, FoodAllergen, FoodNutrient
+from api.db_models import (
+    Allergen,
+    DietaryTag,
+    Food,
+    FoodAllergen,
+    FoodCategory,
+    FoodMealType,
+    FoodNutrient,
+    MealType,
+)
 from api.routes.foods import router as foods_router
 from api.services.catalog_import import import_food_catalog
 from api.services.catalog_readiness import catalog_readiness
@@ -62,6 +71,10 @@ def test_catalog_import_is_idempotent_and_preserves_unknown_allergen_evidence(
     assert catalog_session.query(FoodNutrient).count() == 18
     assert catalog_session.query(FoodAllergen).count() == 0
     assert catalog_session.query(Allergen).count() == 7
+    assert catalog_session.query(FoodCategory).count() >= 1
+    assert catalog_session.query(MealType).count() >= 1
+    assert catalog_session.query(FoodMealType).count() == 4
+    assert catalog_session.query(DietaryTag).count() >= 2
     readiness = catalog_readiness(catalog_session)
     assert readiness["catalog_loaded"] is True
     assert readiness["allergy_evidence_complete"] is False
@@ -70,6 +83,13 @@ def test_catalog_import_is_idempotent_and_preserves_unknown_allergen_evidence(
     chicken = catalog_session.query(Food).filter(Food.external_id == "SAFE1").one()
     assert chicken.health_score == 91.0
     assert chicken.diabetic_friendly is True
+    assert chicken.category_ref.code == "protein"
+    assert {link.meal_type.code for link in chicken.meal_type_links} == {"lunch", "dinner"}
+    assert {link.tag.code for link in chicken.dietary_tag_links} == {
+        "high_protein",
+        "low_sodium",
+        "diabetes_friendly",
+    }
     assert {nutrient.nutrient_code for nutrient in chicken.nutrients} >= {
         "energy_kcal",
         "protein_g",

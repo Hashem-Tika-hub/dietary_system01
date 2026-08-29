@@ -16,7 +16,17 @@ from typing import Iterable
 
 from sqlalchemy.orm import Session
 
-from api.db_models import CatalogSource, Food, FoodNutrient, FoodPortion
+from api.db_models import (
+    CatalogSource,
+    DietaryTag,
+    Food,
+    FoodCategory,
+    FoodDietaryTag,
+    FoodMealType,
+    FoodNutrient,
+    FoodPortion,
+    MealType,
+)
 from api.services.catalog_readiness import catalog_readiness, ensure_reference_allergens
 from api.services.halal_policy import explicit_non_halal_reasons
 
@@ -62,6 +72,78 @@ def _meal_tags(value: str | None) -> list[str]:
 
 def _checksum(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _category_code(value: str | None) -> str:
+    text = (value or "").strip()
+    if any(token in text for token in ("خضر", "سلط")):
+        return "vegetables"
+    if "فواك" in text:
+        return "fruits"
+    if any(token in text for token in ("حبوب", "أرز", "مكرونة", "مخبوز", "معجن")):
+        return "grains"
+    if "ألبان" in text:
+        return "dairy"
+    if "بقول" in text:
+        return "legumes"
+    if any(token in text for token in ("مكسر", "بذور")):
+        return "nuts"
+    if any(token in text for token in ("أسماك", "سمك", "دواجن", "لحوم", "بيض")):
+        return "protein"
+    if any(token in text for token in ("زيوت", "دهون")):
+        return "oils"
+    if "مشروبات" in text:
+        return "beverages"
+    if any(token in text for token in ("سناك", "حلويات", "سكريات", "مقبلات", "صلصات", "شوربات", "يخنات", "أطباق")):
+        return "snacks"
+    return "other"
+
+
+def _meal_codes(value: str | None) -> list[str]:
+    return [
+        {"فطور": "breakfast", "غداء": "lunch", "عشاء": "dinner", "سناك": "snack", "حلوى": "snack"}[tag]
+        for tag in _meal_tags(value)
+        if tag in {"فطور", "غداء", "عشاء", "سناك", "حلوى"}
+    ]
+
+
+def _dimension(
+    db: Session,
+    model: type[FoodCategory] | type[DietaryTag] | type[MealType],
+    code: str,
+    display_name_ar: str,
+    display_name_en: str,
+):
+    item = db.query(model).filter(model.code == code).one_or_none()
+    if item is None:
+        item = model(code=code, display_name_ar=display_name_ar, display_name_en=display_name_en)
+        db.add(item)
+        db.flush()
+    return item
+
+
+def _sync_normalized_dimensions(db: Session, food: Food, source_id: int) -> None:
+    category = _dimension(db, FoodCategory, _category_code(food.category), food.category or "أخرى", _category_code(food.category).replace("_", " ").title())
+    food.category_id = category.id
+    for link in list(food.meal_type_links):
+        db.delete(link)
+    db.flush()
+    for code in _meal_codes("، ".join(food.meal_tags or [])):
+        meal_type = _dimension(db, MealType, code, {"breakfast": "فطور", "lunch": "غداء", "dinner": "عشاء", "snack": "سناك"}[code], code.title())
+        db.add(FoodMealType(food_id=food.id, meal_type_id=meal_type.id))
+    tag_codes = {
+        "high_protein": food.is_high_protein,
+        "low_sodium": food.low_sodium,
+        "diabetes_friendly": food.diabetic_friendly,
+    }
+    for link in list(food.dietary_tag_links):
+        db.delete(link)
+    db.flush()
+    for code, enabled in tag_codes.items():
+        if enabled:
+            tag = _dimension(db, DietaryTag, code, code.replace("_", " "), code.replace("_", " ").title())
+            db.add(FoodDietaryTag(food_id=food.id, tag_id=tag.id, source_id=source_id, data_quality="estimated"))
+    db.flush()
 
 
 def _rows(path: Path) -> Iterable[dict[str, str]]:
@@ -154,6 +236,7 @@ def import_food_catalog(
         food.diabetic_friendly = _as_bool(row.get("diabetic_friendly"))
         food.low_sodium = _as_bool(row.get("low_sodium"))
         food.is_high_protein = _as_bool(row.get("is_high_protein"))
+        _sync_normalized_dimensions(db, food, source.id)
 
         nutrients = {nutrient.nutrient_code: nutrient for nutrient in food.nutrients}
         for csv_column, (nutrient_code, unit) in NUTRIENT_COLUMNS.items():
