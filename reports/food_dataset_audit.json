@@ -1,0 +1,405 @@
+{
+  "dataset": "data/processed/foods_clean.csv",
+  "rows": 456,
+  "columns": 24,
+  "column_names": [
+    "fdc_id",
+    "name",
+    "category",
+    "food_group",
+    "meal_type",
+    "source",
+    "calories",
+    "protein",
+    "carbs",
+    "fat",
+    "fiber",
+    "sugar",
+    "sodium",
+    "calcium",
+    "iron",
+    "protein_pct",
+    "carbs_pct",
+    "fat_pct",
+    "protein_density",
+    "calorie_level",
+    "health_score",
+    "is_high_protein",
+    "diabetic_friendly",
+    "low_sodium"
+  ],
+  "column_stats": {
+    "fdc_id": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 456
+    },
+    "name": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 456
+    },
+    "category": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 38
+    },
+    "food_group": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 7
+    },
+    "meal_type": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 33
+    },
+    "source": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 2
+    },
+    "calories": {
+      "dtype": "int64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 222,
+      "minimum": 0,
+      "maximum": 900,
+      "mean": 181.03947368421052
+    },
+    "protein": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 156,
+      "minimum": 0.0,
+      "maximum": 33.2,
+      "mean": 7.544956140350878
+    },
+    "carbs": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 212,
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "mean": 19.63925438596491
+    },
+    "fat": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 147,
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "mean": 8.77017543859649
+    },
+    "fiber": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 93,
+      "minimum": 0.0,
+      "maximum": 53.0,
+      "mean": 3.0822368421052633
+    },
+    "sugar": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 121,
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "mean": 6.147149122807018
+    },
+    "sodium": {
+      "dtype": "int64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 127,
+      "minimum": 0,
+      "maximum": 38758,
+      "mean": 247.69956140350877
+    },
+    "calcium": {
+      "dtype": "int64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 116,
+      "minimum": 0,
+      "maximum": 1002,
+      "mean": 62.50657894736842
+    },
+    "iron": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 69,
+      "minimum": 0.0,
+      "maximum": 66.4,
+      "mean": 1.8535087719298247
+    },
+    "protein_pct": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 257,
+      "minimum": 0.0,
+      "maximum": 97.0,
+      "mean": 20.914692982456142
+    },
+    "carbs_pct": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 270,
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "mean": 54.65723684210526
+    },
+    "fat_pct": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 281,
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "mean": 28.142763157894738
+    },
+    "protein_density": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 316,
+      "minimum": 0.0,
+      "maximum": 24.24,
+      "mean": 5.228596491228069
+    },
+    "calorie_level": {
+      "dtype": "str",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 4
+    },
+    "health_score": {
+      "dtype": "float64",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 297,
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "mean": 53.69364035087719
+    },
+    "is_high_protein": {
+      "dtype": "bool",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 2,
+      "minimum": false,
+      "maximum": true,
+      "mean": 0.17105263157894737
+    },
+    "diabetic_friendly": {
+      "dtype": "bool",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 2,
+      "minimum": false,
+      "maximum": true,
+      "mean": 0.6381578947368421
+    },
+    "low_sodium": {
+      "dtype": "bool",
+      "missing": 0,
+      "missing_percentage": 0.0,
+      "unique": 2,
+      "minimum": false,
+      "maximum": true,
+      "mean": 0.6513157894736842
+    }
+  },
+  "numeric_conversion_failures": {
+    "calories": 0,
+    "protein": 0,
+    "carbs": 0,
+    "fat": 0,
+    "fiber": 0,
+    "sugar": 0,
+    "sodium": 0,
+    "calcium": 0,
+    "iron": 0
+  },
+  "duplicates": {
+    "exact_duplicate_rows": 0,
+    "duplicate_name_groups": [],
+    "duplicate_name_group_count": 0,
+    "same_name_same_nutrition_groups": 0,
+    "same_name_conflicting_nutrition_groups": 0
+  },
+  "negative_nutritional_values": {
+    "calories": 0,
+    "protein": 0,
+    "carbs": 0,
+    "fat": 0,
+    "fiber": 0,
+    "sugar": 0,
+    "sodium": 0,
+    "calcium": 0,
+    "iron": 0
+  },
+  "impossible_nutritional_values": {
+    "calories_above_900_per_100g": 0,
+    "protein_above_100g_per_100g": 0,
+    "carbs_above_100g_per_100g": 0,
+    "fat_above_100g_per_100g": 0
+  },
+  "calorie_consistency": {
+    "formula": "protein_g * 4 + carbs_g * 4 + fat_g * 9",
+    "rows_evaluated": 456,
+    "rows_within_20_kcal": 413,
+    "rows_outside_20_kcal": 43,
+    "rows_outside_20_percent": 4,
+    "maximum_absolute_residual_kcal": 205.3
+  },
+  "feature_coverage": {
+    "fiber": {
+      "total_records": 456,
+      "available_values": 456,
+      "missing_values": 0,
+      "coverage_percentage": 100.0
+    },
+    "sugar": {
+      "total_records": 456,
+      "available_values": 456,
+      "missing_values": 0,
+      "coverage_percentage": 100.0
+    },
+    "sodium": {
+      "total_records": 456,
+      "available_values": 456,
+      "missing_values": 0,
+      "coverage_percentage": 100.0
+    }
+  },
+  "serving_information": {
+    "serving_columns_present": [],
+    "basis_assumed_by_processed_schema": "100 grams",
+    "missing_serving_metadata": true
+  },
+  "unit_consistency": {
+    "standard_basis": "per 100 grams",
+    "explicit_unit_columns_present": false,
+    "note": "Nutrient columns are interpreted as per 100 grams by the importer; explicit unit metadata is added in the normalized database layer."
+  },
+  "text_formatting": {
+    "whitespace_issues": {
+      "fdc_id": 0,
+      "name": 0,
+      "category": 0,
+      "food_group": 0,
+      "meal_type": 0,
+      "source": 0
+    },
+    "category_count": 38,
+    "categories": [
+      "أسماك",
+      "أطباق أرز",
+      "أطباق بيض",
+      "أطباق تقليدية",
+      "أطباق حبوب",
+      "أطباق خضار",
+      "أطباق سمك",
+      "أطباق لحوم",
+      "ألبان",
+      "بذور",
+      "بقوليات",
+      "بيض",
+      "حبوب",
+      "حلويات",
+      "حلويات/فطور",
+      "خضار",
+      "خضروات",
+      "دهون",
+      "دواجن",
+      "زيوت",
+      "سكريات",
+      "سلطات",
+      "سناكس",
+      "شوربات",
+      "صلصات",
+      "فطور",
+      "فواكه",
+      "لحوم",
+      "لحوم سريعة",
+      "مخبوزات",
+      "مشروبات",
+      "معجنات",
+      "مقبلات",
+      "مكرونة",
+      "مكسرات",
+      "مكونات",
+      "نباتي",
+      "يخنات"
+    ],
+    "meal_type_count": 33,
+    "meal_types": [
+      "حلوى",
+      "حلوى، سناك",
+      "حلوى، عشاء",
+      "حلوى، فطور",
+      "سناك",
+      "سناك، حلوى",
+      "سناك، عشاء",
+      "سناك، غداء",
+      "سناك، غداء، عشاء",
+      "سناك، فطور",
+      "سناك، فطور، غداء، عشاء",
+      "عشاء",
+      "عشاء، سناك",
+      "عشاء، غداء",
+      "غداء",
+      "غداء، سناك",
+      "غداء، عشاء",
+      "غداء، عشاء، سناك",
+      "غداء، عشاء، فطور",
+      "غداء، فطور",
+      "غداء، فطور، عشاء",
+      "فطور",
+      "فطور، حلوى",
+      "فطور، سناك",
+      "فطور، سناك، حلوى",
+      "فطور، سناك، عشاء",
+      "فطور، عشاء",
+      "فطور، عشاء، سناك",
+      "فطور، غداء",
+      "فطور، غداء، سناك",
+      "فطور، غداء، عشاء",
+      "فطور، غداء، عشاء، حلوى",
+      "فطور، غداء، عشاء، سناك"
+    ],
+    "source_count": 2,
+    "sources": [
+      "قياسي",
+      "وصفة تقديرية"
+    ]
+  },
+  "decisions": {
+    "exact_duplicates": "No records are deleted by this audit. Any future removal must be documented and tested.",
+    "duplicate_names": "Duplicate names are reported; identical and conflicting nutrition are not silently merged.",
+    "nutrition": "Suspicious values are flagged only. Existing source values are not overwritten.",
+    "missing_values": "Missing values remain missing and are not replaced with fabricated numbers."
+  },
+  "limitations": [
+    "The processed CSV does not contain explicit serving-size and serving-unit columns.",
+    "The processed CSV stores category and meal type as text; normalized lookup tables are required for controlled values.",
+    "Nutritional consistency against macronutrient energy is a plausibility signal, not a laboratory validation.",
+    "Allergen evidence is separate from this numeric dataset and missing evidence is not treated as safety."
+  ]
+}

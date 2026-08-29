@@ -79,6 +79,18 @@ class User(Base):
     food_feedback = relationship(
         "UserFoodFeedback", back_populates="user", cascade="all, delete-orphan"
     )
+    food_preferences = relationship(
+        "UserFoodPreference", back_populates="user", cascade="all, delete-orphan"
+    )
+    dietary_preferences = relationship(
+        "UserDietaryPreference", back_populates="user", cascade="all, delete-orphan"
+    )
+    interactions = relationship(
+        "UserInteraction", back_populates="user", cascade="all, delete-orphan"
+    )
+    recommendations = relationship(
+        "Recommendation", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class MealLog(Base):
@@ -202,7 +214,8 @@ class Food(Base):
     food_kind = Column(String(20), nullable=False, default="food")
     category = Column(String(100))
     food_group = Column(String(100))
-    meal_tags = Column(JSON, nullable=False, default=list)
+    category_id = Column(Integer, ForeignKey("food_categories.id"), index=True)
+    meal_tags = Column(JSON, nullable=False, default=list)  # legacy API-compatible field
     basis_grams = Column(Float, nullable=False, default=100.0)
     data_quality = Column(String(20), nullable=False, default="verified")
     health_score = Column(Float, nullable=False, default=0.0)
@@ -216,6 +229,13 @@ class Food(Base):
     )
 
     source = relationship("CatalogSource", back_populates="foods")
+    category_ref = relationship("FoodCategory", back_populates="foods")
+    dietary_tag_links = relationship(
+        "FoodDietaryTag", back_populates="food", cascade="all, delete-orphan"
+    )
+    meal_type_links = relationship(
+        "FoodMealType", back_populates="food", cascade="all, delete-orphan"
+    )
     nutrients = relationship(
         "FoodNutrient", back_populates="food", cascade="all, delete-orphan"
     )
@@ -398,3 +418,230 @@ class FoodAllergen(Base):
     food = relationship("Food", back_populates="allergen_records")
     allergen = relationship("Allergen", back_populates="food_records")
     source = relationship("CatalogSource", back_populates="food_allergen_records")
+
+
+# ── أبعاد الكتالوج المطبّعة ─────────────────────────────────
+
+
+class FoodCategory(Base):
+    """قاموس تصنيفات الطعام المضبوطة بدل الاعتماد على نص حر فقط."""
+
+    __tablename__ = "food_categories"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String(50), nullable=False, unique=True, index=True)
+    display_name_ar = Column(String(100), nullable=False)
+    display_name_en = Column(String(100))
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    foods = relationship("Food", back_populates="category_ref")
+
+
+class DietaryTag(Base):
+    """قاموس وسوم غذائية قابلة للاستعلام."""
+
+    __tablename__ = "dietary_tags"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String(50), nullable=False, unique=True, index=True)
+    display_name_ar = Column(String(100), nullable=False)
+    display_name_en = Column(String(100))
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    food_links = relationship("FoodDietaryTag", back_populates="tag")
+    user_preferences = relationship("UserDietaryPreference", back_populates="tag")
+
+
+class FoodDietaryTag(Base):
+    """علاقة many-to-many بين الطعام والوسوم الغذائية."""
+
+    __tablename__ = "food_dietary_tags"
+    __table_args__ = (
+        UniqueConstraint("food_id", "tag_id", name="uq_food_dietary_tag"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    food_id = Column(Integer, ForeignKey("foods.id", ondelete="CASCADE"), nullable=False, index=True)
+    tag_id = Column(Integer, ForeignKey("dietary_tags.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_id = Column(Integer, ForeignKey("catalog_sources.id"))
+    data_quality = Column(String(20), nullable=False, default="estimated")
+
+    food = relationship("Food", back_populates="dietary_tag_links")
+    tag = relationship("DietaryTag", back_populates="food_links")
+
+
+class FoodMealType(Base):
+    """علاقة many-to-many بين الطعام وأنواع الوجبات."""
+
+    __tablename__ = "food_meal_types"
+    __table_args__ = (UniqueConstraint("food_id", "meal_type_id", name="uq_food_meal_type"),)
+
+    id = Column(Integer, primary_key=True)
+    food_id = Column(Integer, ForeignKey("foods.id", ondelete="CASCADE"), nullable=False, index=True)
+    meal_type_id = Column(Integer, ForeignKey("meal_types.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    food = relationship("Food", back_populates="meal_type_links")
+    meal_type = relationship("MealType", back_populates="food_links")
+
+
+class MealType(Base):
+    """قاموس أنواع الوجبات، مستقل عن تصنيف الطعام."""
+
+    __tablename__ = "meal_types"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String(30), nullable=False, unique=True, index=True)
+    display_name_ar = Column(String(100), nullable=False)
+    display_name_en = Column(String(100))
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    meal_links = relationship("MealMealType", back_populates="meal_type")
+    food_links = relationship("FoodMealType", back_populates="meal_type")
+
+
+class Meal(Base):
+    """وجبة مركبة من أطعمة؛ لا تكرر القيم الغذائية يدويًا."""
+
+    __tablename__ = "meals"
+    __table_args__ = (
+        CheckConstraint("name <> ''", name="ck_meals_name_nonempty"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, index=True)
+    description = Column(Text)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    ingredients = relationship("MealIngredient", back_populates="meal", cascade="all, delete-orphan")
+    meal_types = relationship("MealMealType", back_populates="meal", cascade="all, delete-orphan")
+    recommendations = relationship("Recommendation", back_populates="meal")
+    interactions = relationship("UserInteraction", back_populates="meal")
+
+
+class MealIngredient(Base):
+    """مكوّن وجبة يشير إلى Food ويحتفظ بالكمية والوحدة."""
+
+    __tablename__ = "meal_ingredients"
+    __table_args__ = (
+        UniqueConstraint("meal_id", "food_id", "position", name="uq_meal_ingredient_position"),
+        CheckConstraint("quantity > 0", name="ck_meal_ingredient_quantity_positive"),
+        CheckConstraint("unit IN ('g', 'ml', 'piece', 'serving')", name="ck_meal_ingredient_unit_allowed"),
+        CheckConstraint("position >= 0", name="ck_meal_ingredient_position_nonnegative"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    meal_id = Column(Integer, ForeignKey("meals.id", ondelete="CASCADE"), nullable=False, index=True)
+    food_id = Column(Integer, ForeignKey("foods.id"), nullable=False, index=True)
+    quantity = Column(Float, nullable=False)
+    unit = Column(String(20), nullable=False, default="g")
+    position = Column(Integer, nullable=False, default=0)
+    is_optional = Column(Boolean, nullable=False, default=False)
+
+    meal = relationship("Meal", back_populates="ingredients")
+    food = relationship("Food")
+
+
+class MealMealType(Base):
+    """علاقة many-to-many بين الوجبة وأنواع الوجبات."""
+
+    __tablename__ = "meal_meal_types"
+    __table_args__ = (UniqueConstraint("meal_id", "meal_type_id", name="uq_meal_meal_type"),)
+
+    id = Column(Integer, primary_key=True)
+    meal_id = Column(Integer, ForeignKey("meals.id", ondelete="CASCADE"), nullable=False, index=True)
+    meal_type_id = Column(Integer, ForeignKey("meal_types.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    meal = relationship("Meal", back_populates="meal_types")
+    meal_type = relationship("MealType", back_populates="meal_links")
+
+
+# ── تفضيلات المستخدم والتفاعلات الخام ───────────────────────
+
+
+class UserFoodPreference(Base):
+    """تفضيل صريح لطعام، منفصل عن MealLog وعن تقييمات CF."""
+
+    __tablename__ = "user_food_preferences"
+    __table_args__ = (
+        UniqueConstraint("user_id", "food_id", name="uq_user_food_preference"),
+        CheckConstraint(
+            "preference_type IN ('favorite', 'dislike', 'exclude')",
+            name="ck_user_food_preference_type_allowed",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    food_id = Column(Integer, ForeignKey("foods.id", ondelete="CASCADE"), nullable=False, index=True)
+    preference_type = Column(String(20), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    user = relationship("User", back_populates="food_preferences")
+    food = relationship("Food")
+
+
+class UserDietaryPreference(Base):
+    """وسم غذائي اختاره المستخدم، دون خلطه بتصنيف الطعام."""
+
+    __tablename__ = "user_dietary_preferences"
+    __table_args__ = (
+        UniqueConstraint("user_id", "tag_id", name="uq_user_dietary_preference"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    tag_id = Column(Integer, ForeignKey("dietary_tags.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    user = relationship("User", back_populates="dietary_preferences")
+    tag = relationship("DietaryTag", back_populates="user_preferences")
+
+
+class Recommendation(Base):
+    """سجل ما عُرض للمستخدم لربط التفاعل بتوصية فعلية."""
+
+    __tablename__ = "recommendations"
+    __table_args__ = (
+        CheckConstraint("food_id IS NOT NULL OR meal_id IS NOT NULL", name="ck_recommendation_target_required"),
+        CheckConstraint("recommendation_source IN ('CBF', 'CF', 'HYBRID', 'RULE_BASED')", name="ck_recommendation_source_allowed"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    food_id = Column(Integer, ForeignKey("foods.id", ondelete="SET NULL"), index=True)
+    meal_id = Column(Integer, ForeignKey("meals.id", ondelete="SET NULL"), index=True)
+    recommendation_source = Column(String(20), nullable=False)
+    recommendation_score = Column(Float)
+    created_at = Column(DateTime, nullable=False, default=utcnow, index=True)
+
+    user = relationship("User", back_populates="recommendations")
+    food = relationship("Food")
+    meal = relationship("Meal", back_populates="recommendations")
+    interactions = relationship("UserInteraction", back_populates="recommendation")
+
+
+class UserInteraction(Base):
+    """أحداث خام للتخصيص المستقبلي؛ لا تتحول تلقائيًا إلى تقييمات ML."""
+
+    __tablename__ = "user_interactions"
+    __table_args__ = (
+        CheckConstraint("food_id IS NOT NULL OR meal_id IS NOT NULL", name="ck_interaction_target_required"),
+        CheckConstraint("interaction_type IN ('VIEW', 'ACCEPT', 'REJECT', 'SWAP', 'FAVORITE', 'CONSUMED', 'RATE')", name="ck_interaction_type_allowed"),
+        CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="ck_interaction_rating_range"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    food_id = Column(Integer, ForeignKey("foods.id", ondelete="SET NULL"), index=True)
+    meal_id = Column(Integer, ForeignKey("meals.id", ondelete="SET NULL"), index=True)
+    recommendation_id = Column(Integer, ForeignKey("recommendations.id", ondelete="SET NULL"), index=True)
+    interaction_type = Column(String(20), nullable=False)
+    rating = Column(Integer)
+    created_at = Column(DateTime, nullable=False, default=utcnow, index=True)
+
+    user = relationship("User", back_populates="interactions")
+    food = relationship("Food")
+    meal = relationship("Meal", back_populates="interactions")
+    recommendation = relationship("Recommendation", back_populates="interactions")
